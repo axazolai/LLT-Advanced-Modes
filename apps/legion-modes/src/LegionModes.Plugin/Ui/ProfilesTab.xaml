@@ -1,0 +1,33 @@
+<UserControl
+    x:Class="LegionModes.Plugin.Ui.ProfilesTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:wpfui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ScrollViewer x:Name="_scroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,12,16,12">
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <StackPanel Margin="0,0,0,4" Style="{StaticResource CardHeader}">
+                        <wpfui:SymbolIcon Foreground="{DynamicResource PaletteLightBlueBrush}" Style="{StaticResource CardIcon}" Symbol="Layer24" />
+                        <TextBlock x:Name="_title" Style="{StaticResource CardTitle}" />
+                    </StackPanel>
+                    <TextBlock x:Name="_hint" Style="{StaticResource SubLine}" />
+                </StackPanel>
+                <wpfui:Button
+                    x:Name="_addButton"
+                    Grid.Column="1"
+                    Margin="16,0,0,0"
+                    VerticalAlignment="Top"
+                    Appearance="Primary"
+                    Icon="Add24" />
+            </Grid>
+            <TextBlock Margin="0,0,0,8" Style="{StaticResource MessageText}" Text="{Binding Message}"
+                       Visibility="{Binding HasMessage, Converter={StaticResource B2V}}" />
+            <StackPanel x:Name="_list" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

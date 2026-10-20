@@ -1,0 +1,14 @@
+<UserControl
+    x:Class="LegionModes.Plugin.Ui.ProgramsTab"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="0,12,16,12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="5" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <ContentControl x:Name="_listHost" Grid.Column="0" />
+        <ContentControl x:Name="_processHost" Grid.Column="2" />
+    </Grid>
+</UserControl>

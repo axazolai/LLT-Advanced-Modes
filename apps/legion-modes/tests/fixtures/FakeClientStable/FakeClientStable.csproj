@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>FakeClientStable</RootNamespace>
+    <OutputPath>bin\out\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FakeHost.V1\FakeHost.V1.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>FakeWpfClient</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <OutputPath>bin\out\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
+  </PropertyGroup>
+</Project>

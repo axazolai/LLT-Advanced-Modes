@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>LegionModes.Guard</RootNamespace>
+    <AssemblyName>LegionModes.Guard</AssemblyName>
+    <StartupHookSupport>false</StartupHookSupport>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LegionModes.Core\LegionModes.Core.csproj" />
+  </ItemGroup>
+</Project>

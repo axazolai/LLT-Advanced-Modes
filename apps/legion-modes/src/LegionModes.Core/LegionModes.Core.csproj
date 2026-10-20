@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>LegionModes.Core</RootNamespace>
+    <AssemblyName>LegionModes.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Threading.AccessControl" Version="9.0.0" />
+  </ItemGroup>
+</Project>

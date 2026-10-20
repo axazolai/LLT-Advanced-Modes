@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    <!-- The commit id must not reach the binaries (assembly version, source link in the pdb): the payload hash follows content only. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <LltRef Condition="'$(LltRef)' == ''">$(MSBuildThisFileDirectory)..\..\_work\llt-ref\2.36.4.0\{app}</LltRef>
+  </PropertyGroup>
+</Project>

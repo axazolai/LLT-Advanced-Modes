@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
+    <RootNamespace>LegionModes.Plugin</RootNamespace>
+    <AssemblyName>LegionModes</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="LenovoLegionToolkit.Lib"><HintPath>$(LltRef)\LenovoLegionToolkit.Lib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="LenovoLegionToolkit.Lib.Automation"><HintPath>$(LltRef)\LenovoLegionToolkit.Lib.Automation.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Lenovo Legion Toolkit"><HintPath>$(LltRef)\Lenovo Legion Toolkit.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Autofac"><HintPath>$(LltRef)\Autofac.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(LltRef)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Wpf.Ui"><HintPath>$(LltRef)\Wpf.Ui.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Management"><HintPath>$(LltRef)\System.Management.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="WindowsDisplayAPI"><HintPath>$(LltRef)\WindowsDisplayAPI.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LegionModes.Core\LegionModes.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Ui\llt-ru.json" LogicalName="LegionModes.Plugin.Ui.llt-ru.json" />
+    <!-- Translations are files next to the plugin, read at start (Tr): lang\<code>.json -->
+    <Content Include="lang\*.json" CopyToOutputDirectory="PreserveNewest" Link="lang\%(Filename)%(Extension)" />
+  </ItemGroup>
+  <!-- The output folder is staged into Plugins\LegionModes\: only LegionModes.dll and LegionModes.Core.dll (+ pdbs).
+       The DLLs LLT already ships and this build would otherwise copy are listed here. -->
+  <Target Name="DropHostCopies" AfterTargets="ResolveReferences;ResolvePackageAssets" BeforeTargets="_CopyFilesMarkedCopyLocal">
+    <ItemGroup>
+      <_HostShipped Include="@(ReferenceCopyLocalPaths)"
+                    Condition="'%(Extension)' == '.dll' and $([System.String]::new(';System.Threading.AccessControl;Microsoft.Windows.SDK.NET;WinRT.Runtime;').Contains(';%(Filename);'))" />
+      <ReferenceCopyLocalPaths Remove="@(_HostShipped)" />
+    </ItemGroup>
+  </Target>
+</Project>

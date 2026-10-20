@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LegionModes.Core\LegionModes.Core.csproj" />
+    <ProjectReference Include="..\..\src\LegionModes.Updates\LegionModes.Updates.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Build order only: fixture outputs are found by path and FakeHost must never be copied into the test output. -->
+    <ProjectReference Include="..\fixtures\FakeHost.V1\FakeHost.V1.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\fixtures\FakeHost.V2\FakeHost.V2.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\fixtures\FakeClient\FakeClient.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\fixtures\FakeClientStable\FakeClientStable.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\fixtures\FakeWpfClient\FakeWpfClient.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- LLT's pipeline types load at test time: copied into the test output. The plugin references the same files with Private=false. -->
+    <Reference Include="LenovoLegionToolkit.Lib"><HintPath>$(LltRef)\LenovoLegionToolkit.Lib.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="LenovoLegionToolkit.Lib.Automation"><HintPath>$(LltRef)\LenovoLegionToolkit.Lib.Automation.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(LltRef)\Newtonsoft.Json.dll</HintPath><Private>true</Private></Reference>
+    <Compile Include="..\..\src\LegionModes.Plugin\Pipelines\PipelineJson.cs" Link="Llt\PipelineJson.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

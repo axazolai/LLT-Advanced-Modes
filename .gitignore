@@ -1,0 +1,7 @@
+_work/
+depot/
+bin/
+obj/
+TestResults/
+*.user
+*.dmp

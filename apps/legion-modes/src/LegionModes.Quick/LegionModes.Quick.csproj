@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>LegionModes.Quick</RootNamespace>
+    <AssemblyName>LegionModes.Quick</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <StartupHookSupport>false</StartupHookSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LegionModes.Core\LegionModes.Core.csproj" />
+  </ItemGroup>
+</Project>

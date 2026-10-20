@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>LegionModes.Keeper</RootNamespace>
+    <AssemblyName>LegionModes.Keeper</AssemblyName>
+    <StartupHookSupport>false</StartupHookSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LegionModes.Core\LegionModes.Core.csproj" />
+    <ProjectReference Include="..\LegionModes.Updates\LegionModes.Updates.csproj" />
+  </ItemGroup>
+</Project>

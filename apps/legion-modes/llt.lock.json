@@ -1,0 +1,9 @@
+{
+  "llt": { "version": "2.36.4.0", "asset": "LenovoLegionToolkitSetup-v2.36.4.0.exe",
+           "url": "https://github.com/LenovoLegionToolkit-Team/LenovoLegionToolkit/releases/download/v2.36.4.0/LenovoLegionToolkitSetup-v2.36.4.0.exe",
+           "sha256": "721eb6e0041f001e0a8e6eaae8a32354c616e498f53b153cc8a5c80ef62ab7ec",
+           "signerThumbprint": "5A6C3448B4D2FECBAA7EE1BB592E4A7EEE6FB7A8",
+           "repo": "LenovoLegionToolkit-Team/LenovoLegionToolkit" },
+  "innounp": { "version": "2.71.2", "url": "https://github.com/jrathlev/InnoUnpacker-Windows-GUI/releases/download/ui_2_2_13/innounp-2.zip",
+               "sha256": "10fce27b6344b7674d5625cc34afca1c88c12183d957c6d93e401097fa2556cd" }
+}

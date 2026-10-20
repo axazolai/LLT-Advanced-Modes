@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>FakeHost</AssemblyName>
+    <RootNamespace>FakeHost</RootNamespace>
+    <OutputPath>bin\V2\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
+  </PropertyGroup>
+</Project>
