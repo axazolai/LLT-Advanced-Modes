@@ -174,7 +174,7 @@ public static class GodModePresets
     static async Task ApplyOrThrowAsync(GodModeController gm)
     {
         var (applied, _) = await gm.ApplyStateWithResultAsync().ConfigureAwait(false);
-        if (!applied) throw new InvalidOperationException(Tr.T("GodMode не применён: Vantage / Legion Space / Legion Zone включены"));
+        if (!applied) throw new InvalidOperationException(Tr.T("GodMode not applied: Vantage / Legion Space / Legion Zone are on"));
     }
 
     // The active preset and the power mode before the Profiles tab opens LLT's window.

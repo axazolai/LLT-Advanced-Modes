@@ -10,9 +10,12 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="5" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="_gap2" Width="0" />
+                    <ColumnDefinition x:Name="_col3" Width="0" />
                 </Grid.ColumnDefinitions>
                 <StackPanel x:Name="_left" Grid.Column="0" />
                 <StackPanel x:Name="_right" Grid.Column="2" />
+                <StackPanel x:Name="_third" Grid.Column="4" />
             </Grid>
         </StackPanel>
     </ScrollViewer>

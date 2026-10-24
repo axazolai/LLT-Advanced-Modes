@@ -14,7 +14,8 @@ namespace LegionModes.Plugin.Shell;
 
 // Notifications go through LLT's own notification window (the automation notification type). Raised for: an apply step
 // failing (once per step until it succeeds), a compatible update found (once per version), and the entries the keeper and
-// the guard left in notifications-pending.json. Mode changes raise nothing.
+// the guard left in notifications-pending.json, and a change of the profile in force (the power-mode type, so LLT draws it
+// like its own power mode change and its «Power mode» notification setting governs it).
 internal sealed class Notifier : IDisposable
 {
     static readonly TimeSpan Period = TimeSpan.FromSeconds(60);
@@ -58,6 +59,12 @@ internal sealed class Notifier : IDisposable
         catch (Exception e) { Log.Error("publish notification", e); }
     }
 
+    public static void ShowProfile(string name)
+    {
+        try { MessagingCenter.Publish(new NotificationMessage(NotificationType.PowerModeGodMode, Tr.F("Profile: {0}", name))); }
+        catch (Exception e) { Log.Error("publish profile notification", e); }
+    }
+
     void OnStatusChanged(object? sender, PropertyChangedEventArgs e)
     {
         try
@@ -73,7 +80,7 @@ internal sealed class Notifier : IDisposable
                     if (!failed) { _failed.Remove(parameter); continue; }
                     if (!_failed.Add(parameter)) continue;
                     var name = Ui.Texts.Parameter.TryGetValue(parameter, out var n) ? n : parameter.ToString();
-                    texts.Add(Tr.F("Режимы: не удалось применить «{0}»: {1}", name, result));
+                    texts.Add(Tr.F("Advanced modes: could not apply \"{0}\": {1}", name, result));
                 }
             }
             foreach (var t in texts) Show(t);
@@ -99,7 +106,7 @@ internal sealed class Notifier : IDisposable
                 var seen = File.Exists(NotifiedUpdatePath) ? File.ReadAllText(NotifiedUpdatePath).Trim() : "";
                 if (seen != release.Version)
                 {
-                    Show(Tr.F("Режимы: доступно обновление LLT {0}, совместимое с плагином", release.Version));
+                    Show(Tr.F("Advanced modes: LLT update {0} is available, compatible with the plugin", release.Version));
                     Directory.CreateDirectory(_dataDir);
                     File.WriteAllText(NotifiedUpdatePath, release.Version);
                 }

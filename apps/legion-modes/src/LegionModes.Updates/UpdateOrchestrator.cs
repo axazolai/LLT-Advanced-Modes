@@ -78,20 +78,20 @@ public sealed class UpdateOrchestrator(IUpdateOps ops)
             var stopped = await ops.StopLltGracefullyAsync(StopTimeout);
             if (!stopped)
             {
-                outcome = Stop(UpdateStep.Install, Tr.T("LLT не закрылся"), backup);   // nothing installed yet
+                outcome = Stop(UpdateStep.Install, Tr.T("LLT did not close"), backup);   // nothing installed yet
                 await RestartLltAsync();
             }
             else if ((installStarted = true) && ops.RunInstaller(installer) != 0)
-                outcome = await RollbackAsync(UpdateStep.Install, Tr.T("установщик LLT вернул ошибку"), backup, null);
+                outcome = await RollbackAsync(UpdateStep.Install, Tr.T("the LLT installer returned an error"), backup, null);
             else
             {
                 ops.EnforceAfterInstall();
                 if (nextPlugin is not null) ops.InstallPlugin(nextPlugin);   // a throw rolls back like any later step
                 step = UpdateStep.MigrationStart;
                 if (!await ops.StartLltAndWaitLoadedAsync(StartTimeout))
-                    outcome = await RollbackAsync(UpdateStep.MigrationStart, Tr.T("LLT не сообщил о загрузке"), backup, null);
+                    outcome = await RollbackAsync(UpdateStep.MigrationStart, Tr.T("LLT did not report loading"), backup, null);
                 else if (!await ops.StopLltGracefullyAsync(StopTimeout))
-                    outcome = await RollbackAsync(UpdateStep.MigrationStart, Tr.T("LLT не закрылся"), backup, null);
+                    outcome = await RollbackAsync(UpdateStep.MigrationStart, Tr.T("LLT did not close"), backup, null);
                 else
                 {
                     step = UpdateStep.Reconcile;
@@ -105,7 +105,7 @@ public sealed class UpdateOrchestrator(IUpdateOps ops)
                         outcome = st is { Ok: true }
                             ? new UpdateOutcome(true, UpdateStep.Done, null, rec, backup)
                             : await RollbackAsync(UpdateStep.SelfTest,
-                                st is null ? Tr.T("самопроверка не ответила") : string.Join("; ", st.Failures), backup, rec);
+                                st is null ? Tr.T("the self-check did not answer") : string.Join("; ", st.Failures), backup, rec);
                     }
                 }
             }
@@ -151,22 +151,24 @@ public sealed class UpdateOrchestrator(IUpdateOps ops)
         try { await ops.StopLltGracefullyAsync(StopTimeout); } catch { /* ignored */ }
         try
         {
-            if (ops.RunInstaller(ops.InstallerOf(backup)) != 0) problems.Add(Tr.T("установщик из копии вернул ошибку"));
+            var backupInstaller = ops.InstallerOf(backup);
+            if (!ops.VerifySigner(backupInstaller, Pins.SignerThumbprint)) problems.Add(Tr.T("the installer from the backup is not signed by the pinned publisher; not run"));
+            else if (ops.RunInstaller(backupInstaller) != 0) problems.Add(Tr.T("the installer from the backup returned an error"));
         }
-        catch (Exception ex) { problems.Add(Tr.F("установщик из копии упал: {0}", ex.Message)); }
+        catch (Exception ex) { problems.Add(Tr.F("the installer from the backup crashed: {0}", ex.Message)); }
         try { ops.RestoreBackup(backup); }
-        catch (Exception ex) { problems.Add(Tr.F("восстановление файлов упало: {0}", ex.Message)); }
+        catch (Exception ex) { problems.Add(Tr.F("file restore crashed: {0}", ex.Message)); }
         try
         {
             var st = await ops.StartLltAndWaitSelfTestAsync(StartTimeout);
-            if (st is null) problems.Add(Tr.T("самопроверка после отката не ответила"));
-            else if (!st.Ok) problems.Add(Tr.F("самопроверка после отката: {0}", string.Join("; ", st.Failures)));
+            if (st is null) problems.Add(Tr.T("the self-check after the rollback did not answer"));
+            else if (!st.Ok) problems.Add(Tr.F("self-check after the rollback: {0}", string.Join("; ", st.Failures)));
         }
-        catch (Exception ex) { problems.Add(Tr.F("самопроверка после отката упала: {0}", ex.Message)); }
+        catch (Exception ex) { problems.Add(Tr.F("the self-check after the rollback crashed: {0}", ex.Message)); }
 
         if (problems.Count == 0) return new UpdateOutcome(false, failedAt, error, rec, backup);
-        var text = Tr.F("{0}: {1}; откат не удался: {2}", failedAt, error, string.Join("; ", problems));
-        try { ops.Notify(Tr.F("Обновление LLT не удалось, и откат не удался. Копия: {0}. {1}", backup, text)); } catch { /* best effort */ }
+        var text = Tr.F("{0}: {1}; rollback failed: {2}", failedAt, error, string.Join("; ", problems));
+        try { ops.Notify(Tr.F("The LLT update failed and the rollback failed. Backup: {0}. {1}", backup, text)); } catch { /* best effort */ }
         return new UpdateOutcome(false, UpdateStep.RollbackFailed, text, rec, backup);
     }
 }

@@ -1,4 +1,5 @@
 using LegionModes.Core;
+using LegionModes.Core.Engine;
 using LegionModes.Core.Model;
 
 namespace LegionModes.Plugin.Ui.ViewModels;
@@ -34,18 +35,18 @@ public sealed class ProfilesViewModel : TabViewModel
         return target >= 0 && target < Config.Profiles.Count && Config.Profiles[target].Kind == ProfileKind.Automatic;
     }
 
-    public Task MoveAsync(Profile p, int step) => GuardAsync(Tr.T("Не удалось переместить профиль"), async () =>
+    public Task MoveAsync(Profile p, int step) => GuardAsync(Tr.T("Could not move the profile"), async () =>
     {
         if (!CanMove(p, step)) return;
         var list = Config.Profiles.ToList();
         var i = Config.IndexOf(p);
         (list[i], list[i + step]) = (list[i + step], list[i]);
-        await SaveAsync(Config with { Profiles = list }, Tr.T("Порядок сохранён"));
+        await SaveAsync(Config with { Profiles = list }, Tr.T("Order saved"));
     });
 
     // Drag and drop: the profile goes to list index `to` (counted in the list without it), kept after the root and
     // before «Автономия».
-    public Task MoveToAsync(Profile p, int to) => GuardAsync(Tr.T("Не удалось переместить профиль"), async () =>
+    public Task MoveToAsync(Profile p, int to) => GuardAsync(Tr.T("Could not move the profile"), async () =>
     {
         if (p.Kind != ProfileKind.Automatic) return;
         var list = Config.Profiles.Where(x => x.Id != p.Id).ToList();
@@ -53,40 +54,53 @@ public sealed class ProfilesViewModel : TabViewModel
         to = Math.Clamp(to, 1, manual);
         if (to == Config.IndexOf(p)) return;
         list.Insert(to, p);
-        await SaveAsync(Config with { Profiles = list }, Tr.T("Порядок сохранён"));
+        await SaveAsync(Config with { Profiles = list }, Tr.T("Order saved"));
     });
 
-    public Task RenameAsync(Profile p) => GuardAsync(Tr.T("Не удалось переименовать профиль"), async () =>
+    // The list as a tree, every profile under its parent (ProfileOrder.ByHierarchy); nothing is saved when it already is. A pair of
+    // profiles of equal specificity that can match together and change places changes its winner: that is asked first.
+    public Task SortByHierarchyAsync() => GuardAsync(Tr.T("Could not move the profile"), async () =>
+    {
+        var sorted = ProfileOrder.ByHierarchy(Config);
+        if (sorted.Select(p => p.Id).SequenceEqual(Config.Profiles.Select(p => p.Id))) return;
+        var flips = ProfileOrder.Flips(Config.Profiles, sorted);
+        if (flips.Count > 0 && !await _dialogs.ConfirmAsync(Tr.T("The sort changes which profile wins"),
+                string.Join("\n", flips.Select(f => Tr.F("«{0}» will win over «{1}»", ProfileNames.Display(f.Becomes), ProfileNames.Display(f.Was)))),
+                Tr.T("Sort"))) return;
+        await SaveAsync(Config with { Profiles = sorted.ToList() }, Tr.T("Order saved"));
+    });
+
+    public Task RenameAsync(Profile p) => GuardAsync(Tr.T("Could not rename the profile"), async () =>
     {
         if (p.Kind != ProfileKind.Automatic) return;
-        var name = (await _dialogs.PromptAsync(Tr.T("Переименовать профиль"), Tr.T("Название"), ProfileNames.Display(p)))?.Trim();
+        var name = (await _dialogs.PromptAsync(Tr.T("Rename profile"), Tr.T("Name"), ProfileNames.Display(p)))?.Trim();
         if (string.IsNullOrEmpty(name) || name == ProfileNames.Display(p)) return;
-        await SaveAsync(Replace(p, ProfileNames.WithName(p, name)), Tr.T("Профиль переименован"));
+        await SaveAsync(Replace(p, ProfileNames.WithName(p, name)), Tr.T("Profile renamed"));
     });
 
-    public Task DeleteAsync(Profile p) => GuardAsync(Tr.T("Не удалось удалить профиль"), async () =>
+    public Task DeleteAsync(Profile p) => GuardAsync(Tr.T("Could not delete the profile"), async () =>
     {
         if (p.Kind != ProfileKind.Automatic) return;
-        if (!await _dialogs.ConfirmAsync(Tr.F("Удалить профиль «{0}»?", ProfileNames.Display(p)),
-                Tr.T("Его параметры и действия пропадут; профили, которые наследовали от него, возьмут значения выше по цепочке."),
-                Tr.T("Удалить"))) return;
-        await SaveAsync(Config with { Profiles = Config.Profiles.Where(x => x.Id != p.Id).ToList() }, Tr.T("Профиль удалён"));
+        if (!await _dialogs.ConfirmAsync(Tr.F("Delete profile \"{0}\"?", ProfileNames.Display(p)),
+                Tr.T("Its parameters and actions will be lost; profiles that inherited from it take values from higher up the chain."),
+                Tr.T("Delete"))) return;
+        await SaveAsync(Config with { Profiles = Config.Profiles.Where(x => x.Id != p.Id).ToList() }, Tr.T("Profile deleted"));
     });
 
     // A new automatic profile (sets nothing, inherits everything) goes to list index `at` (after the root, at most just
     // before «Автономия»), or before «Автономия» when `at` is null.
-    public Task AddAsync(Conditions conditions, int? at = null) => GuardAsync(Tr.T("Не удалось добавить профиль"), async () =>
+    public Task AddAsync(Conditions conditions, int? at = null) => GuardAsync(Tr.T("Could not add the profile"), async () =>
     {
         var (name, names) = NewName(conditions);
         var profile = new Profile(Guid.NewGuid(), name, ProfileKind.Automatic, conditions, 0, 0, new Parameters(), [], [], names);
         var list = Config.Profiles.ToList();
         var manual = list.FindIndex(x => x.Kind == ProfileKind.Manual) is var m and >= 0 ? m : list.Count;
         list.Insert(Math.Clamp(at ?? manual, 1, manual), profile);
-        await SaveAsync(Config with { Profiles = list }, Tr.F("Профиль «{0}» добавлен", name));
+        await SaveAsync(Config with { Profiles = list }, Tr.F("Profile \"{0}\" added", name));
     });
 
     // A copy takes new conditions (two automatic profiles never share them) and goes right below the original.
-    public Task CopyAsync(Profile p, Conditions conditions) => GuardAsync(Tr.T("Не удалось скопировать профиль"), async () =>
+    public Task CopyAsync(Profile p, Conditions conditions) => GuardAsync(Tr.T("Could not copy the profile"), async () =>
     {
         if (p.Kind != ProfileKind.Automatic) return;
         var ids = new Dictionary<Guid, Guid>();
@@ -100,7 +114,7 @@ public sealed class ProfilesViewModel : TabViewModel
         };
         var list = Config.Profiles.ToList();
         list.Insert(Config.IndexOf(p) + 1, copy);
-        await SaveAsync(Config with { Profiles = list }, Tr.F("Копия «{0}» добавлена", ProfileNames.Display(copy)));
+        await SaveAsync(Config with { Profiles = list }, Tr.F("Copy \"{0}\" added", ProfileNames.Display(copy)));
     });
 
     // The automatic profile that already holds this combination, if any.
@@ -124,7 +138,7 @@ public sealed class ProfilesViewModel : TabViewModel
         }
         catch (ConfigInvalidException e)
         {
-            return Tr.F("Не сохранено: {0}", string.Join("; ", e.Errors));
+            return Tr.F("Not saved: {0}", string.Join("; ", e.Errors));
         }
         finally { ListChanged?.Invoke(); }
     }
@@ -137,7 +151,7 @@ public sealed class ProfilesViewModel : TabViewModel
     {
         var key = ProfileNames.LanguageKey();
         var name = UniqueName(ProfileNames.FromConditions(conditions, english: key != "ru"));
-        return (name, new Dictionary<string, string> { [key == "ru" ? "ru" : "en"] = name });
+        return (name, new Dictionary<string, string> { [key] = name });
     }
 
     string UniqueName(string name)

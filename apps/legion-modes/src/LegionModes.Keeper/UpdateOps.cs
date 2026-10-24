@@ -88,7 +88,7 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
     public string Extract(string installer)
     {
         var innounp = InnounpPath();
-        if (!File.Exists(innounp)) throw new FileNotFoundException(Tr.T("innounp не найден"), innounp);
+        if (!File.Exists(innounp)) throw new FileNotFoundException(Tr.T("innounp not found"), innounp);
         var extractRoot = Path.Combine(Root, "extract");
         if (Directory.Exists(extractRoot))
             foreach (var old in Directory.GetDirectories(extractRoot)) Directory.Delete(old, recursive: true);   // earlier checks' leftovers
@@ -96,7 +96,7 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
         Directory.CreateDirectory(dir);
         var (code, output) = Run(innounp, ["-x", "-b", "-q", "-y", "-o", "-d" + dir, installer], TimeSpan.FromMinutes(5));
         var app = Path.Combine(dir, "{app}");
-        if (code != 0 || !Directory.Exists(app)) throw new InvalidOperationException(Tr.F("innounp вернул код {0}: {1}", code, output).Trim());
+        if (code != 0 || !Directory.Exists(app)) throw new InvalidOperationException(Tr.F("innounp returned code {0}: {1}", code, output).Trim());
         return app;
     }
 
@@ -133,7 +133,7 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
 
     public string Backup(string installedInstaller)
     {
-        if (!File.Exists(installedInstaller)) throw new FileNotFoundException(Tr.T("нет установщика установленной версии"), installedInstaller);
+        if (!File.Exists(installedInstaller)) throw new FileNotFoundException(Tr.T("no installer of the installed version"), installedInstaller);
         var dir = Path.Combine(BackupRoot, $"{DateTime.Now:yyyyMMdd-HHmm}-{InstalledVersion()}");
         for (var n = 2; Directory.Exists(dir); n++) dir = Path.Combine(BackupRoot, $"{DateTime.Now:yyyyMMdd-HHmm}-{InstalledVersion()}_{n}");
         try
@@ -189,9 +189,9 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
     {
         // Only installers kept under the data root (a protected folder) run elevated.
         if (!DataRootSecurity.IsUnder(Root, installer))
-            throw new InvalidOperationException(Tr.F("установщик {0} вне корня данных {1}; отказано", installer, Root));
+            throw new InvalidOperationException(Tr.F("the installer {0} is outside the data root {1}; refused", installer, Root));
         using var p = Process.Start(new ProcessStartInfo(installer, InstallerArgs) { UseShellExecute = false })
-                      ?? throw new InvalidOperationException(Tr.T("установщик не запустился"));
+                      ?? throw new InvalidOperationException(Tr.T("the installer did not start"));
         if (p.WaitForExit(InstallerTimeout)) return p.ExitCode;
         try { p.Kill(entireProcessTree: true); } catch { /* already gone */ }
         KeeperLog.Write($"installer {installer} did not finish in {InstallerTimeout}; killed");
@@ -229,7 +229,7 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
         var from = _swappedFrom;
         if (from is null) return result;
         var differs = PluginFilesDiffer(from, PluginDir);
-        return differs.Count == 0 ? result : result with { KeyFailures = [.. result.KeyFailures, .. differs.Select(f => Tr.F("файл плагина отличается от пакета: {0}", f))] };
+        return differs.Count == 0 ? result : result with { KeyFailures = [.. result.KeyFailures, .. differs.Select(f => Tr.F("the plugin file differs from the package: {0}", f))] };
     }
 
     // Relative names of files of `expected` that are missing or different under `live`.
@@ -296,7 +296,7 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
     public string InstallerOf(string backupDir)
     {
         var dir = Path.Combine(backupDir, "installer");
-        return Directory.GetFiles(dir, "*.exe").FirstOrDefault() ?? throw new FileNotFoundException(Tr.T("в копии нет установщика"), dir);
+        return Directory.GetFiles(dir, "*.exe").FirstOrDefault() ?? throw new FileNotFoundException(Tr.T("no installer in the backup"), dir);
     }
 
     public void RecordHistory(UpdateOutcome outcome, ReleaseInfo release)
@@ -325,7 +325,7 @@ internal sealed class UpdateOps(ReleaseClient client, HttpClient http, KeeperSta
             RedirectStandardError = true,
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
-        using var p = Process.Start(psi) ?? throw new InvalidOperationException(Tr.F("{0} не запустился", exe));
+        using var p = Process.Start(psi) ?? throw new InvalidOperationException(Tr.F("{0} did not start", exe));
         var output = p.StandardOutput.ReadToEndAsync();
         var error = p.StandardError.ReadToEndAsync();
         if (!p.WaitForExit(timeout))

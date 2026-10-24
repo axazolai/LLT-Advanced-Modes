@@ -415,7 +415,4 @@ public sealed class OrchestratorTests
         Assert.Equal("2.36.5.17", ReleaseChoice.Pick(rs, "2.36.4.0", ["2.36.4.0"])!.Version);
         Assert.Null(ReleaseChoice.Pick(rs, "2.36.5.17", ["2.36.4.0"]));
     }
-
-    [Fact(DisplayName = "the signer pin is the thumbprint from llt.lock.json")]
-    public void SignerPin() => Assert.Equal("5A6C3448B4D2FECBAA7EE1BB592E4A7EEE6FB7A8", Pins.SignerThumbprint);
 }

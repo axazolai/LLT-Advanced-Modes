@@ -52,7 +52,7 @@ internal sealed class QuickServer : IAsyncDisposable
                 return new Ack(false, "rejected");
             }
             var result = handle(action.Kind);
-            return result.Handled && result.Error is null ? new Ack(true) : new Ack(false, result.Error ?? Tr.T("не выполнено"));
+            return result.Handled && result.Error is null ? new Ack(true) : new Ack(false, result.Error ?? Tr.T("not done"));
         }
         catch (Exception e)
         {

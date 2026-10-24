@@ -8,6 +8,7 @@ using LegionModes.Core.Engine;
 using LegionModes.Core.Ipc;
 using LegionModes.Core.Status;
 using LegionModes.Core.Supervision;
+using LegionModes.Tray;
 using LegionModes.Updates;
 
 namespace LegionModes.Keeper;
@@ -15,18 +16,31 @@ namespace LegionModes.Keeper;
 internal static class Program
 {
     const string SingleInstanceName = @"Global\LegionModes.Keeper";
+    internal const string MemoryHelper = "--memory-helper";
 
     [DllImport("kernel32.dll")]
     static extern bool AttachConsole(int processId);
 
+    [DllImport("kernel32.dll")]
+    static extern uint SetErrorMode(uint mode);
+
+    const uint NoFaultDialogs = 0x0001 | 0x0002 | 0x8000;   // SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX
+
     static async Task<int> Main(string[] args)
     {
+        SetErrorMode(NoFaultDialogs);   // a fault ends the process quietly; the guard restarts the keeper, the keeper restarts the helper
+        if (args.Contains(MemoryHelper)) return MemoryHelperProtocol.RunHelper(Console.In, Console.Out, () => new LhmMemoryReader());
         Tr.FromLlt();
         if (args.Contains("--check-now")) return await CheckNowAsync();
 
         using var single = new Mutex(false, SingleInstanceName);
         try { if (!single.WaitOne(0)) return 0; }   // never released: the process end abandons it
         catch (AbandonedMutexException) { /* the previous keeper died; this one now owns the mutex */ }
+
+        // The tray icons are registered under a GUID tied to the executable path: from any other folder they may never appear.
+        if (!Paths.DataRootOverridden && Environment.ProcessPath is { } exe
+            && !string.Equals(Path.GetDirectoryName(exe), Paths.InstallDir, StringComparison.OrdinalIgnoreCase))
+            KeeperLog.Write($"keeper runs from {exe}, not from {Paths.InstallDir}: the tray icons are tied to the executable path and may not appear");
 
         // The data root holds installers that run elevated: only SYSTEM and Administrators may write there.
         if (!Paths.DataRootOverridden)
@@ -111,7 +125,6 @@ internal sealed class KeeperService
     readonly UpdateOrchestrator _orchestrator;
     readonly KeeperState _state;
     readonly SemaphoreSlim _gate = new(1, 1);
-    int _updating;
     CancellationToken _stopping;
 
     public KeeperService(bool noLlt, bool devPipeUser)
@@ -157,7 +170,7 @@ internal sealed class KeeperService
             server = null;
         }
 
-        var loops = new List<Task> { GuardWatch.RunAsync(ct), CheckLoopAsync(ct) };
+        var loops = new List<Task> { GuardWatch.RunAsync(ct), CheckLoopAsync(ct), TrayService.RunAsync(ct) };
         if (!_noLlt) loops.Add(_supervisor.RunAsync(ct));
         try { await Task.WhenAll(loops); }
         catch (Exception e) { KeeperLog.Write("loop ended: " + e.Message); }
@@ -193,11 +206,19 @@ internal sealed class KeeperService
                 _ops.OnSelfTest(r);
                 return new Ack(true);
             case CheckRequest:
-                if (Volatile.Read(ref _updating) != 0) return new Ack(false, "an update is running");
                 var outcome = await RunCheckAsync(_stopping);
                 return outcome.Error is null ? new Ack(true) : new Ack(false, outcome.Error);
             case UpdateRequest u:
                 return StartUpdate(u.Version);
+            case ReleaseGpu release:
+                if (TrayService.Loop is not { } loop) return new Ack(false, "the tray loop is not running");
+                loop.ReleaseCard(TimeSpan.FromSeconds(Math.Clamp(release.Seconds, 1, 300)));
+                return new Ack(true);
+            case GpuLiveRequest:
+                if (TrayService.Loop is not { } sensors) return new Ack(false, "the tray loop is not running");
+                sensors.Watch();
+                var g = sensors.Latest;
+                return new GpuLiveReply(g.Awake, g.TempC, g.MemoryC, g.LoadPercent, DateTimeOffset.Now);
             default:
                 return new Ack(false, "unsupported message " + message.GetType().Name);
         }
@@ -232,7 +253,7 @@ internal sealed class KeeperService
         {
             try
             {
-                if (DateTimeOffset.Now >= _state.Updates.NextCheck && Volatile.Read(ref _updating) == 0)
+                if (DateTimeOffset.Now >= _state.Updates.NextCheck)
                     await RunCheckAsync(ct);
                 await Task.Delay(TimeSpan.FromSeconds(15), ct);
             }
@@ -245,49 +266,7 @@ internal sealed class KeeperService
         }
     }
 
-    Message StartUpdate(string requested)
-    {
-        var outcome = _state.LastOutcome;
-        if (outcome?.Release is not { } release || outcome.Report is not { Compatible: true })
-            return new Ack(false, "the last check found no compatible release");
-        if (!SameVersion(release.Version, requested))
-            return new Ack(false, $"requested {requested}, the last check found {release.Version}");
-        var installer = _state.InstalledInstaller ?? FindInstalledInstaller();
-        if (installer is null) return new Ack(false, "the installer of the installed version is not kept");
-        if (Interlocked.CompareExchange(ref _updating, 1, 0) != 0) return new Ack(false, "an update is already running");
-        _ = Task.Run(() => RunUpdateAsync(release, installer));
-        return new Ack(true);
-    }
-
-    static bool SameVersion(string a, string b) =>
-        Version.TryParse(a.TrimStart('v'), out var x) && Version.TryParse(b.TrimStart('v'), out var y) && x == y;
-
-    string? FindInstalledInstaller()
-    {
-        var dir = Path.Combine(Paths.DataRoot(), "installers", _ops.InstalledVersion());
-        return Directory.Exists(dir) ? Directory.GetFiles(dir, "*.exe").FirstOrDefault() : null;
-    }
-
-    async Task RunUpdateAsync(ReleaseInfo release, string installer)
-    {
-        await _gate.WaitAsync();
-        _supervisor.BeginUpdate();
-        try
-        {
-            KeeperLog.Write($"update to {release.Version} started");
-            var outcome = await _orchestrator.UpdateAsync(release, installer, CancellationToken.None);
-            if (outcome.Success)
-            {
-                _state.LastOutcome = null;
-                _state.Update(u => u with { Last = KeeperState.Summarize(new CheckOutcome(null, null, [], null)) });
-            }
-        }
-        catch (Exception e) { KeeperLog.Write("update flow error: " + e); }
-        finally
-        {
-            _supervisor.EndUpdate();
-            Volatile.Write(ref _updating, 0);
-            _gate.Release();
-        }
-    }
+    // LLT is pinned (llt.lock.json): a newer version is reported by the check, installed only from the project after an analysis there.
+    static Message StartUpdate(string requested) =>
+        new Ack(false, $"LLT is pinned to {Pins.LltVersion}; {requested} is installed only from the project after its analysis");
 }

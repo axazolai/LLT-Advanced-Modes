@@ -37,7 +37,7 @@ public sealed class ModesDocument
                 failed.Add(e.Message);
             }
         }
-        return failed.Count == 0 ? null : Tr.F("сохранено, но вкладка не обновилась: {0}", string.Join("; ", failed));
+        return failed.Count == 0 ? null : Tr.F("saved, but the tab did not refresh: {0}", string.Join("; ", failed));
     }
 
     public async Task<string?> SaveModesAsync(ModesConfig config)

@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using LegionModes.Core;
+using LegionModes.Core.Engine;
 using LegionModes.Core.Model;
 using LegionModes.Plugin.Ui.ViewModels;
 using LenovoLegionToolkit.WPF.Controls;
@@ -52,9 +53,12 @@ public partial class ProfilesTab : UserControl
     {
         Resources.MergedDictionaries.Add(SharedResources.Instance);   // before InitializeComponent: StaticResource is resolved while loading
         InitializeComponent();
-        _title.Text = Tr.T("Профили");
-        _hint.Text = Tr.T("Действует самый точный подходящий профиль; при равной точности — тот, что выше в списке. Не заданное профилем берётся у более общих.");
-        _addButton.Content = Tr.T("Новый профиль");
+        _title.Text = Tr.T("Profiles");
+        _hint.Text = Tr.T("The most specific matching profile applies; on equal specificity, the one higher in the list. Whatever a profile leaves unset is taken from the more general ones.");
+        _sortButton.Content = Tr.T("Sort by hierarchy");
+        _sortButton.ToolTip = Tr.T("Puts every profile under its parent; the order of siblings stays");
+        _sortButton.Click += (_, _) => Guard("sort profiles", () => _vm?.SortByHierarchyAsync() ?? Task.CompletedTask);
+        _addButton.Content = Tr.T("New profile");
         _addButton.Click += (_, _) => Guard("new profile", AddAsync);
         _scrollTimer.Tick += (_, _) => Safe("drag scroll", ScrollTick);
     }
@@ -108,7 +112,7 @@ public partial class ProfilesTab : UserControl
         {
             var card = Card(_vm, profiles[i]);
             _cards.Add((profiles[i], card));
-            _list.Children.Add(card);
+            _list.Children.Add(Row(profiles[i], card));
             if (i == profiles.Count - 1) break;
             var at = i + 1;
             var gap = new Gap(() => Guard("insert profile", () => InsertAsync(at)));
@@ -117,6 +121,29 @@ public partial class ProfilesTab : UserControl
             _gaps.Add(gap);
             _list.Children.Add(gap);
         }
+    }
+
+    // The card with the dots of its level in the gutter to the left of it.
+    static FrameworkElement Row(Profile p, FrameworkElement card)
+    {
+        if (Texts.Level(p) == 0) return card;
+        // One dot per level, each centred in its own 16 px column, so the dots of every row stand on the same vertical lines.
+        var dots = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center, IsHitTestVisible = false,
+            Margin = new Thickness(Texts.LevelDotShift, 0, 0, 0),
+        };
+        for (var i = 0; i < Texts.Level(p); i++)
+        {
+            var dot = new Ellipse { Width = 6, Height = 6, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, VerticalAlignment = System.Windows.VerticalAlignment.Center };
+            dot.SetResourceReference(Shape.FillProperty, "TextFillColorSecondaryBrush");
+            dots.Children.Add(new Grid { Width = Texts.LevelStep, Children = { dot } });
+        }
+        var row = new Grid();
+        row.Children.Add(card);
+        row.Children.Add(dots);
+        return row;
     }
 
     // ---- drag and drop ----
@@ -207,12 +234,14 @@ public partial class ProfilesTab : UserControl
         readonly ImageBrush _brush;
         readonly Size _size;
         readonly double _grab;
+        readonly double _x;
         double _y;
 
         public Ghost(UIElement list, FrameworkElement card, double grabY) : base(list)
         {
             _brush = new ImageBrush(BoardDrag.Snapshot(card)) { Opacity = 0.85 };   // taken before the card dims
             _size = new Size(card.ActualWidth, card.ActualHeight);
+            _x = card.TranslatePoint(new Point(0, 0), list).X;
             _grab = grabY;
             IsHitTestVisible = false;
         }
@@ -220,7 +249,7 @@ public partial class ProfilesTab : UserControl
         public void MoveTo(double y) { _y = y; InvalidateVisual(); }
 
         protected override void OnRender(DrawingContext dc) =>
-            dc.DrawRectangle(_brush, null, new Rect(new Point(0, _y - _grab), _size));
+            dc.DrawRectangle(_brush, null, new Rect(new Point(_x, _y - _grab), _size));
     }
 
     // ---- the space between cards ----
@@ -241,12 +270,12 @@ public partial class ProfilesTab : UserControl
             Background = Brushes.Transparent;                       // hit-testable when empty
             var content = new StackPanel { Orientation = Orientation.Horizontal };
             content.Children.Add(new SymbolIcon { Symbol = SymbolRegular.Add24, FontSize = 12, Margin = new Thickness(0, 0, 4, 0), VerticalAlignment = System.Windows.VerticalAlignment.Center });
-            content.Children.Add(new TextBlock { Text = Tr.T("Профиль сюда"), FontSize = 12, VerticalAlignment = System.Windows.VerticalAlignment.Center });
+            content.Children.Add(new TextBlock { Text = Tr.T("Profile here"), FontSize = 12, VerticalAlignment = System.Windows.VerticalAlignment.Center });
             _add = new WpfUiButton
             {
                 Content = content, Height = 24, Padding = new Thickness(8, 0, 8, 0), Margin = new Thickness(0, 0, 8, 0),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Right, VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                Opacity = 0, IsHitTestVisible = false, ToolTip = Tr.T("Новый профиль в этой позиции"),
+                Opacity = 0, IsHitTestVisible = false, ToolTip = Tr.T("New profile at this position"),
             };
             _add.Click += (_, _) => add();
             _dropLine = DropLine();
@@ -262,7 +291,7 @@ public partial class ProfilesTab : UserControl
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var text = new TextBlock { Text = Tr.T("Вставить сюда"), FontSize = 12, Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = System.Windows.VerticalAlignment.Center };
+            var text = new TextBlock { Text = Tr.T("Insert here"), FontSize = 12, Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = System.Windows.VerticalAlignment.Center };
             text.SetResourceReference(TextBlock.ForegroundProperty, "SystemAccentColorSecondaryBrush");
             Grid.SetColumn(text, 1);
             grid.Children.Add(Dash(0));
@@ -298,8 +327,8 @@ public partial class ProfilesTab : UserControl
 
     FrameworkElement Card(ProfilesViewModel vm, Profile p)
     {
-        var header = new CardHeaderControl { Title = $"{vm.Config.IndexOf(p)} · {ProfileNames.Display(p)}", Subtitle = Texts.ProfileSummary(p) };
-        if (vm.InForce == p.Id) header.Success = Tr.T("Действует сейчас");
+        var header = new CardHeaderControl { Title = $"{vm.Config.IndexOf(p)} · {ProfileNames.Display(p)}", Subtitle = Texts.ProfileSummary(p, Resolver.Parents(vm.Config, p)) };
+        if (vm.InForce == p.Id) header.Success = Tr.T("In force now");
 
         // Handle, then the icon (CardControl's own icon slot sits left of the header, so both are drawn here instead,
         // at its size and margin: 24, 0,0,14,0).
@@ -311,11 +340,15 @@ public partial class ProfilesTab : UserControl
         {
             Width = 24, Margin = new Thickness(-6, -8, 6, -8), Background = Brushes.Transparent,
             Cursor = p.Kind == ProfileKind.Automatic ? Cursors.SizeAll : null,
-            ToolTip = p.Kind == ProfileKind.Automatic ? Tr.T("Перетащите, чтобы изменить порядок") : null,
+            ToolTip = p.Kind == ProfileKind.Automatic ? Tr.T("Drag to change the order") : null,
         };
         var dots = new SymbolIcon { Symbol = SymbolRegular.ReOrderDotsVertical24, FontSize = 16, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, VerticalAlignment = System.Windows.VerticalAlignment.Center };
         dots.SetResourceReference(Control.ForegroundProperty, "TextFillColorTertiaryBrush");
-        if (p.Kind != ProfileKind.Automatic) dots.Visibility = Visibility.Hidden;
+        if (p.Kind != ProfileKind.Automatic)
+        {
+            dots.Symbol = SymbolRegular.LockClosed24;   // the root and «Автономия» keep their place
+            handle.ToolTip = Tr.T("The position of this profile is fixed");
+        }
         handle.Child = dots;
         var icon = new SymbolIcon { Symbol = Texts.ProfileIcon(p), FontSize = 24, Margin = new Thickness(0, 0, 14, 0), VerticalAlignment = System.Windows.VerticalAlignment.Center };
         Grid.SetColumn(icon, 1);
@@ -327,19 +360,19 @@ public partial class ProfilesTab : UserControl
         var accessory = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = System.Windows.VerticalAlignment.Center };
         if (p.Kind == ProfileKind.Automatic)
         {
-            accessory.Children.Add(IconButton(SymbolRegular.ArrowUp24, Tr.T("Выше"), vm.CanMove(p, -1), () => vm.MoveAsync(p, -1)));
-            accessory.Children.Add(IconButton(SymbolRegular.ArrowDown24, Tr.T("Ниже"), vm.CanMove(p, 1), () => vm.MoveAsync(p, 1)));
+            accessory.Children.Add(IconButton(SymbolRegular.ArrowUp24, Tr.T("Up"), vm.CanMove(p, -1), () => vm.MoveAsync(p, -1)));
+            accessory.Children.Add(IconButton(SymbolRegular.ArrowDown24, Tr.T("Down"), vm.CanMove(p, 1), () => vm.MoveAsync(p, 1)));
         }
-        var automation = new WpfUiButton { Content = Tr.T("Автоматизация"), Margin = new Thickness(8, 0, 0, 0) };
+        var automation = new WpfUiButton { Content = Tr.T("Automation"), Margin = new Thickness(8, 0, 0, 0) };
         automation.Click += (_, e) => { e.Handled = true; Guard("open automation", () => AutomationAsync(vm, p)); };
         accessory.Children.Add(automation);
-        var settings = IconButton(SymbolRegular.Settings24, Tr.T("Настроить профиль"), true, () => EditAsync(vm, p));
+        var settings = IconButton(SymbolRegular.Settings24, Tr.T("Configure profile"), true, () => EditAsync(vm, p));
         settings.Appearance = ControlAppearance.Secondary;
         settings.Margin = new Thickness(8, 0, 0, 0);
         accessory.Children.Add(settings);
 
         // A click on the row itself opens nothing (owner): only its buttons act.
-        var card = new CardControl { Header = lead, Content = accessory };
+        var card = new CardControl { Header = lead, Content = accessory, Margin = new Thickness(Texts.LevelIndent(p), 0, 0, 0) };
         if (p.Kind == ProfileKind.Automatic)
         {
             handle.PreviewMouseLeftButtonDown += (_, e) => Safe("drag start", () => BeginDrag(p, card, handle, e));
@@ -348,11 +381,11 @@ public partial class ProfilesTab : UserControl
             {
                 Items =
                 {
-                    MenuItem(Tr.T("Выше"), SymbolRegular.ArrowUp24, () => vm.MoveAsync(p, -1), vm.CanMove(p, -1)),
-                    MenuItem(Tr.T("Ниже"), SymbolRegular.ArrowDown24, () => vm.MoveAsync(p, 1), vm.CanMove(p, 1)),
-                    MenuItem(Tr.T("Копировать…"), SymbolRegular.Copy24, () => CopyAsync(vm, p)),
-                    MenuItem(Tr.T("Переименовать…"), SymbolRegular.Rename24, () => vm.RenameAsync(p)),
-                    MenuItem(Tr.T("Удалить"), SymbolRegular.Delete24, () => vm.DeleteAsync(p)),
+                    MenuItem(Tr.T("Up"), SymbolRegular.ArrowUp24, () => vm.MoveAsync(p, -1), vm.CanMove(p, -1)),
+                    MenuItem(Tr.T("Down"), SymbolRegular.ArrowDown24, () => vm.MoveAsync(p, 1), vm.CanMove(p, 1)),
+                    MenuItem(Tr.T("Copy…"), SymbolRegular.Copy24, () => CopyAsync(vm, p)),
+                    MenuItem(Tr.T("Rename…"), SymbolRegular.Rename24, () => vm.RenameAsync(p)),
+                    MenuItem(Tr.T("Delete"), SymbolRegular.Delete24, () => vm.DeleteAsync(p)),
                 },
             };
         }

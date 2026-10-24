@@ -36,20 +36,20 @@ public sealed class ResolverTests
     static IEnumerable<(PowerSource S, LidState L, Workload W, string Expected)> Table()
     {
         yield return (PowerSource.Ac, LidState.Open, Workload.Idle, Exp("Сеть, открыт, простой",
-            $"Сеть, открыт, простой|{Igpu}|Drr|Extend/Max|Conservation|Always|{RootProc}|{TRoot}|3/3"));
+            $"Сеть, открыт, простой|{Hyb}|Drr|Extend/Max|Conservation|Always|{RootProc}|{TRoot}|3/3"));
         yield return (PowerSource.Ac, LidState.Open, Workload.Work, Exp("Сеть, открыт, работа",
-            $"Всегда|{Igpu}|Drr|Extend/Max|Conservation|Always|{RootProc}|{TRoot}|1/3"));
+            $"Всегда|{Hyb}|Drr|Extend/Max|Conservation|Always|{RootProc}|{TRoot}|1/3"));
         yield return (PowerSource.Ac, LidState.Open, Workload.Ai, Exp("Сеть, открыт, ИИ",
             $"Сеть, открыт, ИИ|{Hyb}|Drr|Extend/Max|Conservation|Always|{RootProc}|{TAiOpen}|3/3"));
         yield return (PowerSource.Ac, LidState.Open, Workload.Heavy, Exp("Сеть, открыт, тяжёлая",
             $"Сеть, открыт, тяжёлая|{Hyb}|Fixed240|Extend/Max|Conservation|Always|{RootProc}|{THeavyOpen}|2/3"));
 
         yield return (PowerSource.Ac, LidState.Closed, Workload.Idle, Exp("Сеть, закрыт, простой",
-            $"Сеть, закрыт, простой|{Igpu}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TClosed}|3/0"));
+            $"Сеть, закрыт, простой|{Hyb}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TClosed}|3/0"));
         yield return (PowerSource.Ac, LidState.Closed, Workload.Work, Exp("Сеть, закрыт, работа",
-            $"Сеть, закрыт|{Igpu}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TClosed}|3/0"));
+            $"Сеть, закрыт|{Hyb}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TClosed}|3/0"));
         yield return (PowerSource.Ac, LidState.Closed, Workload.Ai, Exp("Сеть, закрыт",
-            $"Сеть, закрыт|{Igpu}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TClosed}|3/0"));
+            $"Сеть, закрыт|{Hyb}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TClosed}|3/0"));
         yield return (PowerSource.Ac, LidState.Closed, Workload.Heavy, Exp("Сеть, закрыт, тяжёлая",
             $"Сеть, закрыт, тяжёлая|{Hyb}|DoNotTouch|ExternalOnly/Max|Conservation|Always|{RootProc}|{TAcClosedHeavy}|3/0"));
 

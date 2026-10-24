@@ -34,48 +34,47 @@ public partial class ControlTab : UserControl
         vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ControlViewModel.ControlTone)) Tone(); };
         var control = new StackPanel();
         control.Children.Add(state);
-        control.Children.Add(Text(Tr.T("Взять: выключаются автоматизация LLT и привязка режимов питания LLT, действие крышки становится «ничего не делать»; " +
-                                  "прежние значения сохраняются. Вернуть: плагин перестаёт применять режимы, сохранённое возвращается."),
+        control.Children.Add(Text(Tr.T("Take: LLT automation and LLT's power mode binding are turned off, the lid action becomes \"do nothing\"; the previous values are saved. Return: the plugin stops applying modes, the saved values come back."),
                                   "SubLine", new Thickness(0, 4, 0, 12)));
         control.Children.Add(Buttons(
-            new WpfUiButton { Content = Tr.T("Взять управление"), Icon = SymbolRegular.Play24, Appearance = ControlAppearance.Primary, Command = vm.TakeCommand },
-            new WpfUiButton { Content = Tr.T("Вернуть управление"), Icon = SymbolRegular.ArrowUndo24, Command = vm.ReturnCommand }));
-        _left.Children.Add(Card(SymbolRegular.Settings24, "PaletteLightBlueBrush", Tr.T("Управление режимами"), control));
+            new WpfUiButton { Content = Tr.T("Take control"), Icon = SymbolRegular.Play24, Appearance = ControlAppearance.Primary, Command = vm.TakeCommand },
+            new WpfUiButton { Content = Tr.T("Return control"), Icon = SymbolRegular.ArrowUndo24, Command = vm.ReturnCommand }));
+        _left.Children.Add(Card(SymbolRegular.Settings24, "PaletteLightBlueBrush", Tr.T("Mode control"), control));
 
         var pause = new StackPanel();
-        pause.Children.Add(Bound(SymbolRegular.PauseCircle24, Tr.T("Сейчас"), nameof(ControlViewModel.PauseState)));
+        pause.Children.Add(Bound(SymbolRegular.PauseCircle24, Tr.T("Now"), nameof(ControlViewModel.PauseState)));
         var minutes = new WpfUiTextBox { Width = 100 };
         minutes.SetBinding(System.Windows.Controls.TextBox.TextProperty, new Binding(nameof(ControlViewModel.PauseText)) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(minutes);
-        row.Children.Add(new WpfUiButton { Content = Tr.T("Сохранить"), Command = vm.SavePauseCommand, Margin = new Thickness(8, 0, 0, 0) });
-        pause.Children.Add(Row(SymbolRegular.Timer24, Tr.T("Длительность, минут (1–1440)"), row));
+        row.Children.Add(new WpfUiButton { Content = Tr.T("Save"), Command = vm.SavePauseCommand, Margin = new Thickness(8, 0, 0, 0) });
+        pause.Children.Add(Row(SymbolRegular.Timer24, Tr.T("Duration, minutes (1–1440)"), row));
         var error = Text("", "ErrorText");
         error.SetBinding(TextBlock.TextProperty, new Binding(nameof(ControlViewModel.PauseError)));
         void ShowError() => error.Visibility = vm.PauseError is null ? Visibility.Collapsed : Visibility.Visible;
         ShowError();
         vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ControlViewModel.PauseError)) ShowError(); };
         pause.Children.Add(error);
-        pause.Children.Add(Text(Tr.T("Пауза включается в трее или в меню рабочего стола; пока она идёт, параметры не применяются."), "SubLine"));
-        _left.Children.Add(Card(SymbolRegular.PauseCircle24, "PaletteOrangeBrush", Tr.T("Пауза"), pause));
+        pause.Children.Add(Text(Tr.T("Pause is switched on in the tray or the desktop menu; while it lasts, parameters are not applied."), "SubLine"));
+        _left.Children.Add(Card(SymbolRegular.PauseCircle24, "PaletteOrangeBrush", Tr.T("Pause"), pause));
 
         var lighting = new StackPanel();
-        lighting.Children.Add(Bound(SymbolRegular.Camera24, Tr.T("Снимок"), nameof(ControlViewModel.SnapshotText)));
-        lighting.Children.Add(Text(Tr.T("Эффекты шести профилей Spectrum, к которым возвращает сброс к заводским."), "SubLine", new Thickness(0, 0, 0, 12)));
-        lighting.Children.Add(Buttons(new WpfUiButton { Content = Tr.T("Снять снимок"), Icon = SymbolRegular.Camera24, Command = vm.SnapshotCommand }));
-        _right.Children.Add(Card(SymbolRegular.Keyboard24, "PalettePurpleBrush", Tr.T("Подсветка клавиатуры"), lighting));
+        lighting.Children.Add(Bound(SymbolRegular.Camera24, Tr.T("Snapshot"), nameof(ControlViewModel.SnapshotText)));
+        lighting.Children.Add(Text(Tr.T("The effects of the six Spectrum profiles that the factory reset restores."), "SubLine", new Thickness(0, 0, 0, 12)));
+        lighting.Children.Add(Buttons(new WpfUiButton { Content = Tr.T("Take snapshot"), Icon = SymbolRegular.Camera24, Command = vm.SnapshotCommand }));
+        _right.Children.Add(Card(SymbolRegular.Keyboard24, "PalettePurpleBrush", Tr.T("Keyboard lighting"), lighting));
 
         var reset = new StackPanel();
-        reset.Children.Add(Text(Tr.T("Профили — к заводским: профили и их действия, пресеты «AM · …» и подсветка из снимка. Список программ — очистить: все записи удаляются."),
+        reset.Children.Add(Text(Tr.T("Profiles to factory: profiles and their actions, \"AM · …\" presets and the lighting from the snapshot. Program list clear: all entries are removed."),
                                 "SubLine", new Thickness(0, 0, 0, 12)));
         reset.Children.Add(Buttons(
-            new WpfUiButton { Content = Tr.T("Профили — к заводским"), Icon = SymbolRegular.ArrowReset24, Command = vm.FactoryResetCommand },
-            new WpfUiButton { Content = Tr.T("Очистить список программ"), Icon = SymbolRegular.Delete24, Command = vm.ResetProgramsCommand }));
-        _right.Children.Add(Card(SymbolRegular.ArrowReset24, "PaletteRedBrush", Tr.T("Сброс"), reset));
+            new WpfUiButton { Content = Tr.T("Profiles to factory"), Icon = SymbolRegular.ArrowReset24, Command = vm.FactoryResetCommand },
+            new WpfUiButton { Content = Tr.T("Clear the program list"), Icon = SymbolRegular.Delete24, Command = vm.ResetProgramsCommand }));
+        _right.Children.Add(Card(SymbolRegular.ArrowReset24, "PaletteRedBrush", Tr.T("Reset"), reset));
 
         var logs = new StackPanel();
-        logs.Children.Add(Row(SymbolRegular.Folder24, vm.LogsPath, new WpfUiButton { Content = Tr.T("Открыть папку"), Icon = SymbolRegular.FolderOpen24, Command = vm.OpenLogsCommand }));
-        _right.Children.Add(Card(SymbolRegular.DocumentBulletList24, "PaletteBlueBrush", Tr.T("Логи"), logs));
+        logs.Children.Add(Row(SymbolRegular.Folder24, vm.LogsPath, new WpfUiButton { Content = Tr.T("Open folder"), Icon = SymbolRegular.FolderOpen24, Command = vm.OpenLogsCommand }));
+        _right.Children.Add(Card(SymbolRegular.DocumentBulletList24, "PaletteBlueBrush", Tr.T("Logs"), logs));
 
         _ = vm.RefreshSnapshotAsync();
     }

@@ -1,32 +1,40 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace LegionModes.Core;
 
-// The owner-facing text. The Russian source text is the key: Tr.T("текст") returns it as is for Russian and the
-// translation from <code>.json otherwise, a flat JSON object {"русский текст": "translation"}. Two folders: the owner's own
-// (<LLT data>\Plugins\Configs\LegionModes\lang, kept by every update) and the package's (<plugin dir>\lang, mirrored
-// from the package). For a culture code the files en, the language ("de") and the full code ("de-DE") are laid over each
-// other, the owner's folder over the package's; a key found nowhere keeps the Russian text.
-public static class Tr
+// The owner-facing text. The English text is the key: Tr.T("Profiles") returns it as is, unless a translation file of the
+// interface language holds another text for it. A translation file is named after the culture code (ru.json, de.json,
+// de-DE.json): a flat JSON object {"English key": "text"}. Two folders: the package's (<plugin dir>\lang, replaced by every
+// update) and the owner's own (<LLT data>\Plugins\Configs\LegionModes\lang, kept by every update); the owner's is laid over
+// the package's. For a code the language part is laid over first, then the full code. A key found nowhere shows the key.
+// A key may end in a context |2, |3 ... that tells two meanings of one English text apart; it is not shown.
+public static partial class Tr
 {
     static IReadOnlyDictionary<string, string> _map = new Dictionary<string, string>();
 
-    public static string Language { get; private set; } = "ru";
-
-    // Raised (on the calling thread) when Use changed the language or the texts.
-    public static event Action? Changed;
-
-    public static bool IsRussian => Language == "ru";
+    // The language code in use: "en", "ru", "de-DE" ...
+    public static string Language { get; private set; } = "en";
 
     public static string UserLangDir { get; } = Path.Combine(Paths.LltDataDir, "Plugins", "Configs", Paths.PluginId, "lang");
 
     public static string PackageLangDir { get; } = Path.Combine(Path.GetDirectoryName(Paths.PluginDll)!, "lang");
 
-    public static string T(string ru) => _map.TryGetValue(ru, out var t) && t.Length > 0 ? t : ru;
+    [GeneratedRegex(@"\|\d+$")]
+    private static partial Regex Context();
+
+    public static string T(string key) => _map.TryGetValue(key, out var t) && t.Length > 0 ? t : Context().Replace(key, "");
 
     // The text carries {0}, {1}... placeholders; the translation keeps the same ones.
-    public static string F(string ru, params object?[] args) => string.Format(CultureInfo.CurrentCulture, T(ru), args);
+    public static string F(string key, params object?[] args)
+    {
+        try { return string.Format(CultureInfo.CurrentCulture, T(key), args); }
+        catch (FormatException) { return string.Format(CultureInfo.CurrentCulture, Context().Replace(key, ""), args); }   // a broken translation: the English key
+    }
+
+    // Raised (on the calling thread) when Use changed the language or the texts.
+    public static event Action? Changed;
 
     // A culture code ("ru", "ru-RU", "en", "de-DE", ...); null or empty keeps the current language.
     public static void Use(string? code, params string[] langDirs)
@@ -35,22 +43,16 @@ public static class Tr
         code = code.Trim();
         var before = Language;
         var beforeMap = _map;
-        if (code.StartsWith("ru", StringComparison.OrdinalIgnoreCase))
-        {
-            Language = "ru"; _map = new Dictionary<string, string>();
-            if (before != Language) Changed?.Invoke();
-            return;
-        }
         Language = code;
         var dirs = langDirs.Length > 0 ? langDirs : [PackageLangDir, UserLangDir];   // later folders win
         var lang = code.Split('-', '_')[0];
         var merged = new Dictionary<string, string>();
-        foreach (var name in new[] { "en", lang, code }.Distinct(StringComparer.OrdinalIgnoreCase))   // the more specific file wins
+        foreach (var name in new[] { lang, code }.Distinct(StringComparer.OrdinalIgnoreCase))   // the more specific file wins
             foreach (var dir in dirs)
                 if (Read(Path.Combine(dir, name + ".json")) is { } map)
                     foreach (var kv in map) merged[kv.Key] = kv.Value;
-        _map = merged;   // no file at all: the Russian text stays
-        if (before != Language || beforeMap.Count != merged.Count) Changed?.Invoke();
+        _map = merged;   // no file at all: the keys (English) show
+        if (!string.Equals(before, Language, StringComparison.Ordinal) || beforeMap.Count != merged.Count) Changed?.Invoke();
     }
 
     // LLT writes its language code to <LLT data>\lang; a missing or unreadable file falls back to the Windows UI culture.
@@ -66,8 +68,8 @@ public static class Tr
         Use(string.IsNullOrWhiteSpace(code) ? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName : code, langDirs);
     }
 
-    // Test seam: restores the default.
-    public static void Reset() { Language = "ru"; _map = new Dictionary<string, string>(); }
+    // Test seam: English, no files.
+    public static void Reset() { Language = "en"; _map = new Dictionary<string, string>(); }
 
     static Dictionary<string, string>? Read(string path)
     {

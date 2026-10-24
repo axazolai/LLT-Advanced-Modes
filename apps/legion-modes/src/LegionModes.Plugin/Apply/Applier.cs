@@ -2,6 +2,7 @@ using LegionModes.Core;
 using System.IO;
 using System.Diagnostics;
 using LegionModes.Core.Engine;
+using LegionModes.Core.Ipc;
 using LegionModes.Core.Model;
 using LegionModes.Plugin.Backlight;
 using LenovoLegionToolkit.Lib;
@@ -57,7 +58,7 @@ public sealed class Applier(Func<Guid?> controlScheme, Func<ModesConfig> modes, 
         {
             await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
             var text = await _power.VerifyAfterAttachAsync().ConfigureAwait(false);
-            if (text is not null) problem(Tr.F("значения GPU после подключения dGPU: {0}", text));
+            if (text is not null) problem(Tr.F("GPU values after dGPU connected: {0}", text));
             else Log.Trace("GPU values verified after dGPU attach");
         }
         catch (Exception e) { Log.Error("verify after dGPU attach", e); }
@@ -152,10 +153,14 @@ public sealed class Applier(Func<Guid?> controlScheme, Func<ModesConfig> modes, 
         if (!(await feature.GetAllStatesAsync().ConfigureAwait(false)).Contains(target))
             return $"GPU mode {target} is not available on this machine";
         if (await feature.GetStateAsync().ConfigureAwait(false) == target)
+        {
+            if (target == HybridModeState.OnIGPUOnly) await EjectDGpuAsync(feature).ConfigureAwait(false);
             return dGpuNeeded && target != HybridModeState.OnIGPUOnly ? await WaitForDGpuAsync().ConfigureAwait(false) : null;
+        }
         try
         {
             await feature.SetStateAsync(target).ConfigureAwait(false);
+            if (target == HybridModeState.OnIGPUOnly) await EjectDGpuAsync(feature).ConfigureAwait(false);
         }
         catch (Exception e) when (target == HybridModeState.OnIGPUOnly)
         {
@@ -163,10 +168,25 @@ public sealed class Applier(Func<Guid?> controlScheme, Func<ModesConfig> modes, 
             Log.Error("iGPU-only", e);
             try { await feature.SetStateAsync(HybridModeState.On).ConfigureAwait(false); }
             catch (Exception e2) { Log.Error("fall back to Hybrid", e2); return $"iGPU-only failed: {e.Message}; fall back to Hybrid failed: {e2.Message}"; }
-            return Tr.F("iGPU-only отказано (остался Hybrid): {0}", e.Message);
+            return Tr.F("iGPU-only refused (stayed on Hybrid): {0}", e.Message);
         }
         // The power step that follows writes GPU values: they need the dGPU, so wait for it to attach.
         return dGpuNeeded && target != HybridModeState.OnIGPUOnly ? await WaitForDGpuAsync().ConfigureAwait(false) : null;
+    }
+
+    // The mode write alone leaves the card attached (seen on the laptop 2026-10-24: the CLI and the plugin set iGPU-only, the card stayed
+    // for minutes; LLT's own control releases it at once). LLT's control calls this after the write: it ejects the card when nothing holds it.
+    static async Task EjectDGpuAsync(HybridModeFeature feature)
+    {
+        // The keeper's open NVIDIA library would hold the card (measured 2026-10-24: gone 15 s after the keeper stopped, still there 13 min with it).
+        try
+        {
+            await PipeClient.SendAsync(Paths.KeeperPipe, new ReleaseGpu(90), TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+            await Task.Delay(1000).ConfigureAwait(false);
+        }
+        catch (Exception e) { Log.Error("keeper release", e); }
+        try { await feature.EnsureDGPUEjectedIfNeededAsync().ConfigureAwait(false); Log.Trace("iGPU-only: dGPU eject requested"); }
+        catch (Exception e) { Log.Error("dGPU eject", e); }
     }
 
     static readonly TimeSpan DGpuWait = TimeSpan.FromSeconds(10);
@@ -182,7 +202,7 @@ public sealed class Applier(Func<Guid?> controlScheme, Func<ModesConfig> modes, 
             while (true)
             {
                 if (await notify.IsDGPUAvailableAsync().ConfigureAwait(false)) return null;
-                if (DateTime.UtcNow >= deadline) return Tr.T("dGPU не подключился за 10 с");
+                if (DateTime.UtcNow >= deadline) return Tr.T("dGPU did not connect within 10 s");
                 await Task.Delay(500).ConfigureAwait(false);
             }
         }

@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LegionModes.Core\LegionModes.Core.csproj" />
     <ProjectReference Include="..\..\src\LegionModes.Updates\LegionModes.Updates.csproj" />
+    <ProjectReference Include="..\..\src\LegionModes.Tray\LegionModes.Tray.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Build order only: fixture outputs are found by path and FakeHost must never be copied into the test output. -->

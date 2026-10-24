@@ -81,13 +81,13 @@ public sealed class ProfileEngine        // not thread-safe: the caller serialis
 
         Profile profile;
         string reason;
-        if (Autonomy) { profile = config.Autonomy; reason = Tr.T("включена вручную"); }
+        if (Autonomy) { profile = config.Autonomy; reason = Tr.T("turned on manually"); }
         else
         {
             profile = Resolver.Select(config, matching);
             var m = profile.Kind == ProfileKind.Automatic ? matches[profile.Id] : null;
-            reason = m is null ? Tr.T("ни один профиль не подходит")
-                : m.Holds ? Tr.T("условия выполнены") : Tr.F("удержание до {0:HH:mm:ss}", m.HoldUntil);
+            reason = m is null ? Tr.T("no profile matches")
+                : m.Holds ? Tr.T("conditions met") : Tr.F("held until {0:HH:mm:ss}", m.HoldUntil);
         }
 
         var pauseOverride = overrides.FirstOrDefault(o => o.Kind == OverrideKind.Pause);

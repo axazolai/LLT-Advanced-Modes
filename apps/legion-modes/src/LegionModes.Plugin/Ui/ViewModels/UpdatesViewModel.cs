@@ -12,13 +12,12 @@ public sealed record HistoryLine(string Version, string When, string Result, Ton
 public sealed class UpdatesViewModel : TabViewModel
 {
     UpdatesFile? _file;
-    string _installed = Tr.T("нет данных"), _latest = Tr.T("нет данных"), _lastCheck = Tr.T("нет данных"), _compatibility = "", _problems = "";
+    string _installed = Tr.T("no data"), _latest = Tr.T("no data"), _lastCheck = Tr.T("no data"), _compatibility = "", _problems = "";
     Tone _compatibilityTone = Tone.Muted;
 
     public UpdatesViewModel()
     {
         CheckCommand = new RelayCommand(CheckAsync);
-        UpdateCommand = new RelayCommand(UpdateAsync, () => CanUpdate);
         RefreshCommand = new RelayCommand(RefreshAsync);
     }
 
@@ -28,7 +27,6 @@ public sealed class UpdatesViewModel : TabViewModel
     public ObservableCollection<ChangelogLine> Changelog { get; } = [];
     public ObservableCollection<HistoryLine> History { get; } = [];
     public RelayCommand CheckCommand { get; }
-    public RelayCommand UpdateCommand { get; }
     public RelayCommand RefreshCommand { get; }
 
     public string Installed { get => _installed; private set => Set(ref _installed, value); }
@@ -38,8 +36,6 @@ public sealed class UpdatesViewModel : TabViewModel
     public Tone CompatibilityTone { get => _compatibilityTone; private set => Set(ref _compatibilityTone, value); }
     public string Problems { get => _problems; private set { if (Set(ref _problems, value)) Raise(nameof(HasProblems)); } }
     public bool HasProblems => _problems.Length > 0;
-
-    public bool CanUpdate => _file?.Last is { Compatible: true, Release: { } r } && r.Version != _file.InstalledVersion && !Busy;
 
     // updates.json is replaced by the keeper; the shared reader returns null while the replace is in flight.
     static async Task<UpdatesFile?> ReadWithRetryAsync()
@@ -61,11 +57,10 @@ public sealed class UpdatesViewModel : TabViewModel
             _file = await ReadWithRetryAsync();
             Apply();
         }
-        catch (Exception e) { Fail(Tr.T("Не удалось прочитать updates.json"), e); }
-        UpdateCommand.Refresh();
+        catch (Exception e) { Fail(Tr.T("Could not read updates.json"), e); }
     }
 
-    static string Time(DateTimeOffset? t) => t is null ? Tr.T("нет данных") : t.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    static string Time(DateTimeOffset? t) => t is null ? Tr.T("no data") : t.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
 
     void Apply()
     {
@@ -74,37 +69,36 @@ public sealed class UpdatesViewModel : TabViewModel
         CompatibilityTone = Tone.Muted;
         if (_file is null)
         {
-            Installed = Latest = LastCheck = Tr.T("нет данных");
+            Installed = Latest = LastCheck = Tr.T("no data");
             Compatibility = "";
             Problems = "";
-            Raise(nameof(CanUpdate));
             Changed?.Invoke();
             return;
         }
-        Installed = string.IsNullOrEmpty(_file.InstalledVersion) ? Tr.T("нет данных") : _file.InstalledVersion;
-        LastCheck = Time(_file.LastCheck) + (_file.NextCheck is { } next ? Tr.F(" (следующая: {0})", Time(next)) : "");
+        Installed = string.IsNullOrEmpty(_file.InstalledVersion) ? Tr.T("no data") : _file.InstalledVersion;
+        LastCheck = Time(_file.LastCheck) + (_file.NextCheck is { } next ? Tr.F(" (next: {0})", Time(next)) : "");
         var last = _file.Last;
         if (last is null)
         {
-            Latest = Tr.T("нет данных");
+            Latest = Tr.T("no data");
             Compatibility = "";
             Problems = "";
         }
         else if (last.Error is { } err)
         {
-            Latest = Tr.T("ошибка проверки");
+            Latest = Tr.T("check error");
             Compatibility = err;
             CompatibilityTone = Tone.Bad;
             Problems = "";
         }
         else
         {
-            Latest = last.Release is { } r ? $"{r.Version} ({r.Published.ToLocalTime():dd.MM.yyyy})" : Tr.T("нет данных");
+            Latest = last.Release is { } r ? $"{r.Version} ({r.Published.ToLocalTime():dd.MM.yyyy})" : Tr.T("no data");
             Compatibility = last.Compatible switch
             {
-                true => Tr.F("Совместимо (проверено ссылок: {0})", last.ReferencesChecked),
-                false => Tr.F("Несовместимо (проверено ссылок: {0})", last.ReferencesChecked),
-                _ => Tr.T("не проверялось"),
+                true => Tr.F("Compatible (references checked: {0})", last.ReferencesChecked),
+                false => Tr.F("Incompatible (references checked: {0})", last.ReferencesChecked),
+                _ => Tr.T("not checked"),
             };
             CompatibilityTone = last.Compatible switch { true => Tone.Good, false => Tone.Bad, _ => Tone.Muted };
             Problems = string.Join(Environment.NewLine, last.Problems);
@@ -112,60 +106,51 @@ public sealed class UpdatesViewModel : TabViewModel
         }
         foreach (var h in _file.History.OrderByDescending(h => h.At))
             History.Add(h.Success
-                ? new HistoryLine(h.Version, Time(h.At), Tr.T("успешно"), Tone.Good, null)
-                : new HistoryLine(h.Version, Time(h.At), h.FailedAt is "Rollback" or "RollbackFailed" ? StepName(h.FailedAt) : Tr.F("сбой: {0}", StepName(h.FailedAt)),
+                ? new HistoryLine(h.Version, Time(h.At), Tr.T("success"), Tone.Good, null)
+                : new HistoryLine(h.Version, Time(h.At), h.FailedAt is "Rollback" or "RollbackFailed" ? StepName(h.FailedAt) : Tr.F("failed: {0}", StepName(h.FailedAt)),
                     h.FailedAt == "RollbackFailed" ? Tone.Bad : Tone.Warn, h.Error));
         Changed?.Invoke();
-        Raise(nameof(CanUpdate));
     }
 
     public event Action? Changed;                      // after every read of updates.json: the tab redraws its cards
 
     static string StepName(string step) => step switch
     {
-        "Download" => Tr.T("скачивание"),
-        "Verify" => Tr.T("проверка подписи"),
-        "Extract" => Tr.T("распаковка"),
-        "Compat" => Tr.T("проверка совместимости"),
-        "Backup" => Tr.T("резервная копия"),
-        "Install" => Tr.T("установка"),
-        "MigrationStart" => Tr.T("первый запуск"),
-        "Reconcile" => Tr.T("сверка настроек"),
-        "SelfTest" => Tr.T("самопроверка"),
-        "Rollback" => Tr.T("откат выполнен"),
-        "RollbackFailed" => Tr.T("откат не удался"),
+        "Download" => Tr.T("download"),
+        "Verify" => Tr.T("signature check"),
+        "Extract" => Tr.T("unpacking"),
+        "Compat" => Tr.T("compatibility check"),
+        "Backup" => Tr.T("backup"),
+        "Install" => Tr.T("installation"),
+        "MigrationStart" => Tr.T("first start"),
+        "Reconcile" => Tr.T("settings reconcile"),
+        "SelfTest" => Tr.T("self-test"),
+        "Rollback" => Tr.T("rolled back"),
+        "RollbackFailed" => Tr.T("rollback failed"),
         _ => step,
     };
 
     async Task Send(string what, Core.Ipc.Message request, TimeSpan timeout)
     {
         Busy = true;
-        UpdateCommand.Refresh();
         try
         {
             var reply = await PipeClient.SendAsync(Paths.KeeperPipe, request, timeout);
-            if (reply is Ack { Ok: true }) Info(Tr.F("{0}: готово", what));
+            if (reply is Ack { Ok: true }) Info(Tr.F("{0}: done", what));
             else if (reply is Ack ack) { IsError = true; Message = Tr.F("{0}: {1}", what, ack.Error); }
-            else { IsError = true; Message = Tr.F("{0}: сторож обновлений (Keeper) не отвечает", what); }
+            else { IsError = true; Message = Tr.F("{0}: the update keeper (Keeper) is not responding", what); }
         }
         finally
         {
             Busy = false;
-            Raise(nameof(CanUpdate));
-            UpdateCommand.Refresh();
         }
     }
 
-    Task CheckAsync() => GuardAsync(Tr.T("Проверка обновлений"), async () =>
+    Task CheckAsync() => GuardAsync(Tr.T("Update check"), async () =>
     {
-        Info(Tr.T("Проверка идёт: скачивание и сверка могут занять несколько минут"));
-        await Send(Tr.T("Проверка обновлений"), new CheckRequest(), TimeSpan.FromMinutes(10));   // the keeper replies when the check is done
+        Info(Tr.T("Check in progress: download and verification can take a few minutes"));
+        await Send(Tr.T("Update check"), new CheckRequest(), TimeSpan.FromMinutes(10));   // the keeper replies when the check is done
         await RefreshAsync();
     });
 
-    Task UpdateAsync() => GuardAsync(Tr.T("Обновление"), async () =>
-    {
-        if (_file?.Last?.Release is not { } r) return;
-        await Send(Tr.T("Обновление"), new UpdateRequest(r.Version), TimeSpan.FromSeconds(15));
-    });
 }

@@ -242,10 +242,10 @@ public sealed class ProfileEngineTests
     public void BuiltInRules()
     {
         var (e, _) = Make();
-        var d = e.Update(Ac(Workload.Work));
+        var d = e.Update(Bat(Workload.Work));
         Assert.Equal(GpuMode.HybridIgpuOnly, d.Parameters.Gpu.Value);
         Assert.Empty(d.Notes);
-        d = e.Update(Ac(Workload.Work, ext: true));
+        d = e.Update(Bat(Workload.Work, ext: true));
         Assert.Equal(GpuMode.Hybrid, d.Parameters.Gpu.Value);
         Assert.Contains(RuleNote.ExternalMonitorKeepsHybrid, d.Notes);
 

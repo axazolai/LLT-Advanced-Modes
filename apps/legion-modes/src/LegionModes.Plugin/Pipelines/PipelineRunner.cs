@@ -93,7 +93,7 @@ internal sealed class PipelineRunner(Func<bool> active, Func<AutomationPipeline,
             var detail = ex is AggregateException ae ? string.Join("; ", ae.InnerExceptions.Select(i => i.Message)) : ex.Message;
             var label = name ?? ep.Pipeline.Id.ToString();
             Log.Error($"pipeline {label} of profile {ep.Source.Name}", ex);
-            Settle(ep.Pipeline.Id, Tr.F("{0} (профиль «{1}»): {2}", label, ProfileNames.Display(ep.Source), detail));
+            Settle(ep.Pipeline.Id, Tr.F("{0} (profile \"{1}\"): {2}", label, ProfileNames.Display(ep.Source), detail));
         }
     }
 

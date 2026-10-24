@@ -27,22 +27,22 @@ public static class ModesStore
                 schema = doc.RootElement.ValueKind == JsonValueKind.Object
                     && doc.RootElement.TryGetProperty("schemaVersion", out var v) && v.TryGetInt32(out var n) ? n : null;
             if (schema == 1)
-                return new(FactoryProfiles.Create(), null, Tr.T("профили схемы 1 заменены заводским набором"), "modes.schema1.json");
+                return new(FactoryProfiles.Create(), null, Tr.T("schema 1 profiles replaced with the factory set"), "modes.schema1.json");
             if (schema != ModesConfig.CurrentSchema)
                 return new(FactoryProfiles.Create(),
-                    Tr.F("версия схемы {0} не поддерживается (нужна {1})", schema?.ToString() ?? Tr.T("(не указана)"), ModesConfig.CurrentSchema));
+                    Tr.F("schema version {0} is not supported ({1} required)", schema?.ToString() ?? Tr.T("(not set)"), ModesConfig.CurrentSchema));
 
-            var config = JsonSerializer.Deserialize<ModesConfig>(text, Options) ?? throw new JsonException(Tr.T("файл пуст"));
+            var config = JsonSerializer.Deserialize<ModesConfig>(text, Options) ?? throw new JsonException(Tr.T("the file is empty"));
             var error = ModesValidator.Errors(config, maxBrightness).FirstOrDefault();
             if (error is not null) return new(FactoryProfiles.Create(), error);
             // The old lid words in profile names are replaced, unless that would make the config invalid (a name taken).
             var renamed = config with { Profiles = config.Profiles.Select(p => p with { Name = ProfileNames.WithCurrentLidWords(p.Name) }).ToList() };
             if (renamed.Profiles.SequenceEqual(config.Profiles) || ModesValidator.Errors(renamed, maxBrightness).Count > 0) return new(config, null);
-            return new(renamed, null, Tr.T("названия профилей: «открыта» / «закрыта» заменены на «открыт» / «закрыт»"), "modes.lid-words.json");
+            return new(renamed, null, Tr.T("profile names: the old lid words were replaced with the current ones"), "modes.lid-words.json");
         }
         catch (Exception e)
         {
-            return new(FactoryProfiles.Create(), Tr.F("не удалось прочитать {0}: {1}", path, e.Message));
+            return new(FactoryProfiles.Create(), Tr.F("could not read {0}: {1}", path, e.Message));
         }
     }
 

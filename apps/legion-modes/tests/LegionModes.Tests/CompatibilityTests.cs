@@ -1,3 +1,5 @@
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
 using LegionModes.Core.Contracts;
 using LegionModes.Updates;
 
@@ -224,5 +226,52 @@ public class CompatibilityTests
         var r = CompatibilityChecker.Check(client, desktop, CompatibilityChecker.HostAssembliesOf(client, desktop), []);
         Assert.True(r.Compatible, string.Join("; ", r.Problems));
         Assert.True(r.ReferencesChecked > 0);
+    }
+
+    // A copy of the host assembly in a new folder with its assembly version lowered (the Assembly table row: hash algorithm, then four 16-bit numbers).
+    private static string HostWithVersion(string sourceDir, string name, ushort major)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "legionmodes-ver-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var target = Path.Combine(dir, name + ".dll");
+        File.Copy(Path.Combine(sourceDir, name + ".dll"), target);
+        int at;
+        using (var s = File.OpenRead(target))
+        using (var pe = new System.Reflection.PortableExecutable.PEReader(s))
+            at = pe.PEHeaders.MetadataStartOffset + pe.GetMetadataReader().GetTableMetadataOffset(System.Reflection.Metadata.Ecma335.TableIndex.Assembly) + 4;
+        using (var f = new FileStream(target, FileMode.Open, FileAccess.Write))
+        {
+            f.Position = at;
+            f.Write(BitConverter.GetBytes(major));
+            f.Write(new byte[6]);   // minor, build, revision 0
+        }
+        return dir;
+    }
+
+    private static Version ReferencedVersion(string assembly, string name)
+    {
+        using var pe = new System.Reflection.PortableExecutable.PEReader(File.OpenRead(assembly));
+        var md = pe.GetMetadataReader();
+        return md.AssemblyReferences.Select(md.GetAssemblyReference).Single(r => md.GetString(r.Name) == name).Version;
+    }
+
+    [Fact(DisplayName = "@critical a host assembly with a lower version than the plugin references is reported; an equal or higher one is not")]
+    public void LowerHostVersionIsReported()
+    {
+        var referenced = ReferencedVersion(Client, "FakeHost");
+        Assert.Empty(CompatibilityChecker.ReferenceVersionProblems(Client, V1));
+
+        var older = HostWithVersion(V1, "FakeHost", (ushort)(referenced.Major == 0 ? 0 : referenced.Major - 1));
+        try
+        {
+            if (referenced.Major == 0) Assert.Empty(CompatibilityChecker.ReferenceVersionProblems(Client, older));   // nothing lower than 0.x to test against
+            else
+            {
+                var problems = CompatibilityChecker.ReferenceVersionProblems(Client, older);
+                Assert.Contains(problems, p => p.Contains("FakeHost") && p.Contains("the host has"));
+                Assert.False(CompatibilityChecker.Check(Client, older, Host, []).Compatible);
+            }
+        }
+        finally { Directory.Delete(older, true); }
     }
 }

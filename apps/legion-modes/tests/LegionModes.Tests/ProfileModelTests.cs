@@ -1,3 +1,4 @@
+using LegionModes.Core.Engine;
 using LegionModes.Core.Model;
 
 namespace LegionModes.Tests;
@@ -34,12 +35,12 @@ public sealed class ProfileModelTests : IDisposable
         return File.ReadAllText(p);
     }
 
-    [Fact(DisplayName = "@critical factory set: valid, 24 profiles in the order of mode-defaults, presets for exactly the own-preset profiles")]
+    [Fact(DisplayName = "@critical factory set: valid, 25 profiles in the order of mode-defaults, presets for exactly the own-preset profiles")]
     public void FactorySetIsValidAndComplete()
     {
         var c = FactoryProfiles.Create();
         Assert.Empty(ModesValidator.Errors(c, MaxBrightness));
-        Assert.Equal(24, c.Profiles.Count);
+        Assert.Equal(25, c.Profiles.Count);
         Assert.Equal(ProfileNames.Root, c.Profiles[0].Name);
         Assert.Equal(ProfileKind.Root, c.Profiles[0].Kind);
         Assert.Equal(ProfileNames.Autonomy, c.Autonomy.Name);
@@ -47,7 +48,7 @@ public sealed class ProfileModelTests : IDisposable
 
         string[] expected =
         [
-            "Всегда", "Закрыт", "Слабый адаптер", "Батарея", "Сеть, закрыт", "Слабый адаптер, закрыт", "Батарея, закрыт",
+            "Всегда", "Закрыт", "Сеть", "Слабый адаптер", "Батарея", "Сеть, закрыт", "Слабый адаптер, закрыт", "Батарея, закрыт",
             "Сеть, открыт, тяжёлая", "Сеть, открыт, ИИ", "Сеть, открыт, работа", "Сеть, открыт, простой",
             "Сеть, закрыт, тяжёлая", "Сеть, закрыт, работа", "Сеть, закрыт, простой",
             "Слабый адаптер, открыт, тяжёлая", "Слабый адаптер, открыт, работа", "Слабый адаптер, открыт, простой",
@@ -231,5 +232,33 @@ public sealed class ProfileModelTests : IDisposable
         Assert.Equal(Json(clash), Json(r.Value));
 
         Assert.Equal("Открытая крышка, закрыт", ProfileNames.WithCurrentLidWords("Открытая крышка, закрыта"));
+    }
+    [Fact(DisplayName = "@important sort by hierarchy: a tree, every profile under the last of its parents; the closed-lid family under «Закрыт»; flips of equal-specificity winners are reported")]
+    public void SortByHierarchyBuildsTheTree()
+    {
+        var f = FactoryProfiles.Create();
+        var order = new[] { "Батарея", "Слабый адаптер", "Сеть", "Закрыт" };                  // the owner's order: «Закрыт» last of the level
+        var scrambled = f with
+        {
+            Profiles = new[] { f.Profiles[0] }
+                .Concat(order.Select(n => Find(f, n)))
+                .Concat(f.Profiles.Where(p => p.Kind == ProfileKind.Automatic && p.Conditions.Specificity > 1))
+                .Append(f.Profiles[^1]).ToArray()
+        };
+        var sorted = ProfileOrder.ByHierarchy(scrambled).Select(p => p.Name).ToArray();
+
+        Assert.Equal("Всегда", sorted[0]);
+        Assert.Equal("Автономия", sorted[^1]);
+        Assert.Equal(scrambled.Profiles.Select(p => p.Id).Order(), ProfileOrder.ByHierarchy(scrambled).Select(p => p.Id).Order());
+        var at = Array.IndexOf(sorted, "Закрыт");
+        Assert.Equal(["Закрыт", "Сеть, закрыт", "Сеть, закрыт, тяжёлая", "Сеть, закрыт, работа", "Сеть, закрыт, простой"], sorted[at..(at + 5)]);
+        Assert.Equal("Слабый адаптер, закрыт", sorted[at + 5]);
+        foreach (var p in scrambled.Profiles.Where(p => p.Kind == ProfileKind.Automatic))
+            foreach (var parent in Resolver.Parents(scrambled, p).Where(q => q.Kind == ProfileKind.Automatic))
+                Assert.True(Array.IndexOf(sorted, parent.Name) < Array.IndexOf(sorted, p.Name), parent.Name + " above " + p.Name);
+
+        var flips = ProfileOrder.Flips(scrambled.Profiles, ProfileOrder.ByHierarchy(scrambled));
+        Assert.All(flips, x => Assert.Equal(x.Was.Conditions.Specificity, x.Becomes.Conditions.Specificity));
+        Assert.Empty(ProfileOrder.Flips(f.Profiles, f.Profiles));
     }
 }

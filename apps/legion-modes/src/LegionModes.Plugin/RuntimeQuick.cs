@@ -65,14 +65,14 @@ public sealed partial class Runtime
             var confirmed = await _ui.InvokeAsync(async () =>
             {
                 if (System.Windows.Application.Current?.MainWindow is { } window) window.BringToForeground();
-                return await MessageBoxHelper.ShowAsync("dGPU", Tr.T("Перезагрузить ноутбук в режим dGPU?"), Tr.T("Перезагрузить"), Tr.T("Отмена"));
+                return await MessageBoxHelper.ShowAsync("dGPU", Tr.T("Restart the laptop into dGPU mode?"), Tr.T("Restart"), Tr.T("Cancel"));
             }).ConfigureAwait(false);
             if (!await confirmed.ConfigureAwait(false)) return;
             var error = await Task.Run(Apply.Applier.ApplyDGpuOverrideAndRestartAsync).ConfigureAwait(false);
             if (error is not null)
             {
                 Status.LastApplyError = "dGPU: " + error;
-                Shell.Notifier.Show(Tr.F("Режимы: не удалось включить режим dGPU: {0}", error));
+                Shell.Notifier.Show(Tr.F("Advanced modes: could not turn on dGPU mode: {0}", error));
             }
         }
         catch (Exception e) { Log.Error("dGPU action", e); }

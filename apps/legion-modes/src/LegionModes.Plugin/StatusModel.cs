@@ -12,7 +12,7 @@ public sealed class StatusModel : INotifyPropertyChanged
     readonly Action<Action> _post;
 
     // A parameter result that is a note (applied, with a stated difference) starts with this; it is not an error.
-    public static string NotePrefix => Tr.T("заметка: ");
+    public static string NotePrefix => Tr.T("note: ");
 
     public StatusModel(Action<Action>? post = null) => _post = post ?? (a => a());
 

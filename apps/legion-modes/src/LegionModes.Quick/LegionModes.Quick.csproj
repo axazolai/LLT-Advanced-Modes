@@ -5,6 +5,8 @@
     <AssemblyName>LegionModes.Quick</AssemblyName>
     <UseWindowsForms>true</UseWindowsForms>
     <StartupHookSupport>false</StartupHookSupport>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\LegionModes.Core\LegionModes.Core.csproj" />

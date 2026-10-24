@@ -35,46 +35,46 @@ public static class ProgramsStore
                     return MigrateV1(doc.RootElement);
 
             var config = JsonSerializer.Deserialize<ProgramsConfig>(text, Options)
-                         ?? throw new JsonException(Tr.T("файл пуст"));
+                         ?? throw new JsonException(Tr.T("the file is empty"));
             return Errors(config) is { Count: > 0 } errors ? new(Empty(), errors[0]) : new(config, null);
         }
         catch (Exception e)
         {
-            return new(Empty(), Tr.F("не удалось прочитать {0}: {1}", path, e.Message));
+            return new(Empty(), Tr.F("could not read {0}: {1}", path, e.Message));
         }
     }
 
     static LoadResult<ProgramsConfig> MigrateV1(JsonElement root)
     {
         if (!root.TryGetProperty("rules", out var rules) || rules.ValueKind != JsonValueKind.Array)
-            return new(Empty(), Tr.T("в файле нет списка программ"));
+            return new(Empty(), Tr.T("the file has no program list"));
         var entries = new List<ProgramEntry>();
         foreach (var r in rules.EnumerateArray())
         {
             var pattern = r.ValueKind == JsonValueKind.Object && r.TryGetProperty("pattern", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
             var cls = r.ValueKind == JsonValueKind.Object && r.TryGetProperty("class", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
-            if (string.IsNullOrWhiteSpace(pattern)) return new(Empty(), Tr.T("в списке программ есть запись без шаблона"));
+            if (string.IsNullOrWhiteSpace(pattern)) return new(Empty(), Tr.T("the program list has an entry without a pattern"));
             if (!Enum.TryParse<ProgramClass>(cls, true, out var pc) || pc is not (ProgramClass.Work or ProgramClass.Heavy))
-                return new(Empty(), Tr.F("неизвестный класс «{0}» в схеме 1", cls));
+                return new(Empty(), Tr.F("unknown class \"{0}\" in schema 1", cls));
             entries.Add(new ProgramEntry(pattern, pc));
         }
-        return new(new ProgramsConfig(ProgramsConfig.CurrentSchema, entries), null, Tr.T("programs.json переведён со схемы 1 на схему 2"));
+        return new(new ProgramsConfig(ProgramsConfig.CurrentSchema, entries), null, Tr.T("programs.json migrated from schema 1 to schema 2"));
     }
 
     // The checks Load applies: empty means the loader accepts the config.
     public static IReadOnlyList<string> Errors(ProgramsConfig c)
     {
         if (c.SchemaVersion != ProgramsConfig.CurrentSchema)
-            return [Tr.F("версия схемы {0} не поддерживается (нужна {1})", c.SchemaVersion, ProgramsConfig.CurrentSchema)];
+            return [Tr.F("schema version {0} is not supported ({1} required)", c.SchemaVersion, ProgramsConfig.CurrentSchema)];
         if (c.Entries is null || c.Entries.Any(e => e is null || string.IsNullOrWhiteSpace(e.Pattern)))
-            return [Tr.T("в списке программ есть запись без шаблона")];
+            return [Tr.T("the program list has an entry without a pattern")];
         var errors = new List<string>();
         foreach (var e in c.Entries)
         {
-            if (!Enum.IsDefined(e.Class)) errors.Add(Tr.F("«{0}»: неизвестный класс", e.Pattern));
-            if (e.CommandLine is { } cl && string.IsNullOrWhiteSpace(cl)) errors.Add(Tr.F("«{0}»: пустой шаблон командной строки", e.Pattern));
+            if (!Enum.IsDefined(e.Class)) errors.Add(Tr.F("\"{0}\": unknown class", e.Pattern));
+            if (e.CommandLine is { } cl && string.IsNullOrWhiteSpace(cl)) errors.Add(Tr.F("\"{0}\": empty command-line pattern", e.Pattern));
             if (e.DenyWakeRequests && WakeOverrides.ExeName(e.Pattern) is null)
-                errors.Add(Tr.F("«{0}»: запрет удерживать сон работает только для шаблона, который кончается именем exe без масок", e.Pattern));
+                errors.Add(Tr.F("\"{0}\": the keep-awake block works only for a pattern that ends with an exe name without wildcards", e.Pattern));
         }
         return errors;
     }

@@ -84,13 +84,13 @@ internal sealed class DashboardCard : IDisposable
         body.Children.Add(name);
         body.Children.Add(reason);
         body.Children.Add(apply);
-        var more = new Wpf.Ui.Controls.Button { Content = Tr.T("Подробнее"), Icon = Wpf.Ui.Common.SymbolRegular.ArrowRight24 };
+        var more = new Wpf.Ui.Controls.Button { Content = Tr.T("Details"), Icon = Wpf.Ui.Common.SymbolRegular.ArrowRight24 };
         more.Click += (_, _) =>
         {
             try { TrayBlock.OpenPage(); }
             catch (Exception e) { Log.Error("dashboard card open page", e); }
         };
-        var card = Ui.Look.Card(Wpf.Ui.Common.SymbolRegular.Layer24, "PaletteLightBlueBrush", Tr.T("Расширенные режимы"), body, more);
+        var card = Ui.Look.Card(Wpf.Ui.Common.SymbolRegular.Layer24, "PaletteLightBlueBrush", Tr.T("Advanced modes"), body, more);
         card.Resources.MergedDictionaries.Add(Ui.SharedResources.Instance);
         card.Margin = new Thickness(0, 16, 16, 8);
 
@@ -102,7 +102,7 @@ internal sealed class DashboardCard : IDisposable
                 name.Text = vm.InForceName;
                 reason.Text = vm.InForceReason;
                 reason.SetResourceReference(TextBlock.ForegroundProperty, vm.InForceTone == Tone.Good ? "PaletteGreenBrush" : "PaletteOrangeBrush");
-                var line = Ui.StatusTab.Line(new StatusLine(Tr.T("Последнее применение"), vm.ApplyLine));
+                var line = Ui.StatusTab.Line(new StatusLine(Tr.T("Last apply"), vm.ApplyLine));
                 if (line is FrameworkElement fe) fe.Margin = new Thickness(0);   // the line's own bottom margin would lift it off the row's centre
                 apply.Content = line;
             }

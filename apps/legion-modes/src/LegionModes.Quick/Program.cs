@@ -24,15 +24,15 @@ static class Program
         if (QuickActions.Parse(arg) is not { } kind) return 2;
 
         var reply = PipeClient.SendAsync(Paths.QuickPipe, new QuickAction(kind), TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
-        if (reply is null) return Balloon(Tr.T("Расширенные режимы не запущены"));
-        if (reply is Ack { Ok: false } nack) return Balloon(nack.Error ?? Tr.T("Действие не выполнено"));
+        if (reply is null) return Balloon(Tr.T("Advanced modes is not running"));
+        if (reply is Ack { Ok: false } nack) return Balloon(nack.Error ?? Tr.T("The action was not done"));
         return 0;
     }
 
     static int Balloon(string text)
     {
         using var icon = new NotifyIcon { Icon = System.Drawing.SystemIcons.Information, Visible = true };
-        icon.ShowBalloonTip(5000, Tr.T("Расширенные режимы"), text, ToolTipIcon.Info);
+        icon.ShowBalloonTip(5000, Tr.T("Advanced modes"), text, ToolTipIcon.Info);
         Thread.Sleep(5000);
         icon.Visible = false;
         return 1;

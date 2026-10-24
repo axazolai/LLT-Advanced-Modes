@@ -37,9 +37,9 @@ public partial class ProgramsTab : UserControl
     {
         Resources.MergedDictionaries.Add(SharedResources.Instance);   // before InitializeComponent: StaticResource is resolved while loading
         InitializeComponent();
-        _save.Content = Tr.T("Сохранить");
-        _revert.Content = Tr.T("Отменить");
-        _search.PlaceholderText = Tr.T("Поиск: имя, описание, путь");
+        _save.Content = Tr.T("Save");
+        _revert.Content = Tr.T("Revert");
+        _search.PlaceholderText = Tr.T("Search: name, description, path");
         _processTimer.Tick += (_, _) => { _processTimer.Stop(); Safe("processes", RenderProcesses); };
         _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); Safe("programs search", () => { if (_vm is { } vm) vm.Search = _search.Text; }); };
         // Icons that arrived while a field of the list was being typed in are shown once the field is left.
@@ -114,7 +114,7 @@ public partial class ProgramsTab : UserControl
 
     UIElement ListCard(ProgramsViewModel vm)
     {
-        var add = new WpfUiButton { Content = Tr.T("Добавить"), Icon = SymbolRegular.Add24 };
+        var add = new WpfUiButton { Content = Tr.T("Add"), Icon = SymbolRegular.Add24 };
         add.Click += (_, _) => Safe("program add", () => vm.Add(new ProgramItem { Expanded = true }));
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
         buttons.Children.Add(add);
@@ -122,22 +122,21 @@ public partial class ProgramsTab : UserControl
         buttons.Children.Add(_save);
 
         var top = new StackPanel();
-        top.Children.Add(Text(Tr.T("Шаблон: имя exe (game.exe), путь (C:\\Games\\**\\game.exe) или папка с \\ на конце; * — внутри одного уровня, ** — любая глубина. " +
-                              "Из нескольких подходящих записей действует самый тяжёлый класс."), "SubLine", new Thickness(0, 0, 0, 8)));
+        top.Children.Add(Text(Tr.T("Pattern: exe name (game.exe), path (C:\\Games\\**\\game.exe) or a folder ending with \\; * matches within one level, ** any depth. Of several matching entries the heaviest class applies."), "SubLine", new Thickness(0, 0, 0, 8)));
         var message = new TextBlock();
         message.SetResourceReference(StyleProperty, "MessageText");
         message.SetBinding(TextBlock.TextProperty, new Binding(nameof(TabViewModel.Message)));
         message.SetBinding(VisibilityProperty, new Binding(nameof(TabViewModel.HasMessage)) { Converter = new BooleanToVisibilityConverter() });
         message.Margin = new Thickness(0, 0, 0, 8);
         top.Children.Add(message);
-        return FillCard(SymbolRegular.TextBulletListLtr24, "PaletteLightBlueBrush", Tr.T("Список программ"), buttons, top, _items);
+        return FillCard(SymbolRegular.TextBulletListLtr24, "PaletteLightBlueBrush", Tr.T("Program list"), buttons, top, _items);
     }
 
     UIElement ProcessCard(ProgramsViewModel vm)
     {
-        var refresh = new WpfUiButton { Icon = SymbolRegular.ArrowClockwise24, ToolTip = Tr.T("Обновить список процессов") };
+        var refresh = new WpfUiButton { Icon = SymbolRegular.ArrowClockwise24, ToolTip = Tr.T("Refresh the process list") };
         refresh.Click += (_, _) => _ = vm.LoadProcessesAsync();
-        return FillCard(SymbolRegular.AppGeneric24, "PaletteGreenBrush", Tr.T("Запущенные процессы"), refresh, _search, _processes);
+        return FillCard(SymbolRegular.AppGeneric24, "PaletteGreenBrush", Tr.T("Running processes"), refresh, _search, _processes);
     }
 
     void RenderItems()
@@ -146,7 +145,7 @@ public partial class ProgramsTab : UserControl
         _itemsStale = false;
         _save.IsEnabled = _revert.IsEnabled = vm.Dirty;
         _items.Children.Clear();
-        if (vm.Items.Count == 0) _items.Children.Add(Text(Tr.T("Список пуст: процессы не влияют на нагрузку."), "SubLine"));
+        if (vm.Items.Count == 0) _items.Children.Add(Text(Tr.T("The list is empty: no process affects the workload."), "SubLine"));
         foreach (var item in vm.Items) _items.Children.Add(ItemRow(vm, item));
     }
 
@@ -173,14 +172,14 @@ public partial class ProgramsTab : UserControl
         // The exe or the last folder as the title, the whole pattern under it.
         var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         var title = pattern.TrimEnd('\\', '*').Split('\\').LastOrDefault(x => x.Length > 0) ?? "";
-        var name = Text(pattern.Length == 0 ? Tr.T("новая запись") : title.Length > 0 ? title : pattern, "ItemName");
+        var name = Text(pattern.Length == 0 ? Tr.T("new entry") : title.Length > 0 ? title : pattern, "ItemName");
         name.TextWrapping = TextWrapping.NoWrap;
         name.TextTrimming = TextTrimming.CharacterEllipsis;
         text.Children.Add(name);
         var details = new List<string>();
         if (pattern != title && pattern.Length > 0) details.Add(pattern);
-        if (item.CommandLine.Trim().Length > 0) details.Add(Tr.T("командная строка: ") + item.CommandLine.Trim());
-        if (item.DenyWakeRequests) details.Add(Tr.T("не даёт держать экран и сон"));
+        if (item.CommandLine.Trim().Length > 0) details.Add(Tr.T("command line: ") + item.CommandLine.Trim());
+        if (item.DenyWakeRequests) details.Add(Tr.T("blocks keeping the screen and sleep"));
         if (details.Count > 0) text.Children.Add(Text(string.Join(" · ", details), "SubLine", new Thickness(0, 2, 0, 0)));
         Grid.SetColumn(text, 1);
         row.Children.Add(text);
@@ -194,10 +193,10 @@ public partial class ProgramsTab : UserControl
             if (combo.SelectedItem is ComboBoxItem { Tag: ProgramClass c } && c != item.Class) { item.Class = c; vm.Edited(); }
         });
         right.Children.Add(combo);
-        var gear = new WpfUiButton { Icon = SymbolRegular.Settings24, ToolTip = Tr.T("Шаблон, командная строка, сон"), Margin = new Thickness(8, 0, 0, 0) };
+        var gear = new WpfUiButton { Icon = SymbolRegular.Settings24, ToolTip = Tr.T("Pattern, command line, sleep"), Margin = new Thickness(8, 0, 0, 0) };
         gear.Click += (_, _) => Safe("program expand", () => { item.Expanded = !item.Expanded; RenderItems(); });
         right.Children.Add(gear);
-        var delete = new WpfUiButton { Icon = SymbolRegular.Delete24, ToolTip = Tr.T("Удалить"), Margin = new Thickness(8, 0, 0, 0) };
+        var delete = new WpfUiButton { Icon = SymbolRegular.Delete24, ToolTip = Tr.T("Delete"), Margin = new Thickness(8, 0, 0, 0) };
         delete.Click += (_, _) => Safe("program delete", () => vm.Remove(item));
         right.Children.Add(delete);
         Grid.SetColumn(right, 2);
@@ -219,15 +218,15 @@ public partial class ProgramsTab : UserControl
     static UIElement Editor(ProgramsViewModel vm, ProgramItem item)
     {
         var panel = new StackPanel { Margin = new Thickness(0, 8, 0, 4) };
-        var pattern = new WpfUiTextBox { Text = item.Pattern, PlaceholderText = Tr.T("Шаблон: game.exe или C:\\Games\\**\\game.exe") };
+        var pattern = new WpfUiTextBox { Text = item.Pattern, PlaceholderText = Tr.T("Pattern: game.exe or C:\\Games\\**\\game.exe") };
         pattern.TextChanged += (_, _) => Safe("program pattern", () => { if (pattern.Text != item.Pattern) { item.Pattern = pattern.Text; vm.Touched(); } });
-        panel.Children.Add(Field(Tr.T("Шаблон"), pattern));
-        var commandLine = new WpfUiTextBox { Text = item.CommandLine, PlaceholderText = Tr.T("любая; * — любые символы, например *serve*") };
+        panel.Children.Add(Field(Tr.T("Pattern"), pattern));
+        var commandLine = new WpfUiTextBox { Text = item.CommandLine, PlaceholderText = Tr.T("any; * matches any characters, e.g. *serve*") };
         commandLine.TextChanged += (_, _) => Safe("program command line", () => { if (commandLine.Text != item.CommandLine) { item.CommandLine = commandLine.Text; vm.Touched(); } });
-        panel.Children.Add(Field(Tr.T("Командная строка"), commandLine));
+        panel.Children.Add(Field(Tr.T("Command line"), commandLine));
         var deny = new Wpf.Ui.Controls.ToggleSwitch { IsChecked = item.DenyWakeRequests, VerticalAlignment = VerticalAlignment.Center };
         deny.Click += (_, _) => Safe("program deny wake", () => { item.DenyWakeRequests = deny.IsChecked == true; vm.Edited(); });
-        panel.Children.Add(Row(SymbolRegular.WeatherMoon24, Tr.T("Не давать держать экран и сон (шаблон должен кончаться именем exe без *)"), deny));
+        panel.Children.Add(Row(SymbolRegular.WeatherMoon24, Tr.T("Do not let it keep the screen and sleep (the pattern must end with an exe name without *)"), deny));
         return panel;
     }
 
@@ -245,10 +244,10 @@ public partial class ProgramsTab : UserControl
         _processes.Children.Clear();
         var windowed = vm.Processes.Where(p => p.Windowed).ToList();
         var rest = vm.Processes.Where(p => !p.Windowed).ToList();
-        if (vm.Processes.Count == 0) _processes.Children.Add(Text(vm.Search.Length > 0 ? Tr.T("ничего не найдено") : Tr.T("читается…"), "SubLine"));
-        if (windowed.Count > 0) _processes.Children.Add(Group(Tr.F("С окнами ({0})", windowed.Count)));
+        if (vm.Processes.Count == 0) _processes.Children.Add(Text(vm.Search.Length > 0 ? Tr.T("nothing found") : Tr.T("reading…"), "SubLine"));
+        if (windowed.Count > 0) _processes.Children.Add(Group(Tr.F("With windows ({0})", windowed.Count)));
         foreach (var p in windowed) _processes.Children.Add(ProcessRow(vm, p));
-        if (rest.Count > 0) _processes.Children.Add(Group(Tr.F("Фоновые и службы ({0})", rest.Count)));
+        if (rest.Count > 0) _processes.Children.Add(Group(Tr.F("Background and services ({0})", rest.Count)));
         foreach (var p in rest) _processes.Children.Add(ProcessRow(vm, p));
     }
 
@@ -272,7 +271,7 @@ public partial class ProgramsTab : UserControl
         name.TextWrapping = TextWrapping.NoWrap;
         name.TextTrimming = TextTrimming.CharacterEllipsis;
         text.Children.Add(name);
-        var sub = Text(p.Path is null ? Tr.F("{0} · путь недоступен", p.Exe) : p.Display == p.Exe ? p.Path : p.Exe + " · " + p.Path, "SubLine", new Thickness(0, 2, 0, 0));
+        var sub = Text(p.Path is null ? Tr.F("{0} · path unavailable", p.Exe) : p.Display == p.Exe ? p.Path : p.Exe + " · " + p.Path, "SubLine", new Thickness(0, 2, 0, 0));
         sub.TextWrapping = TextWrapping.NoWrap;
         sub.TextTrimming = TextTrimming.CharacterEllipsis;
         sub.ToolTip = p.Path;
@@ -281,10 +280,10 @@ public partial class ProgramsTab : UserControl
         row.Children.Add(text);
 
         var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
-        var mark = Text(p.Class is { } c ? ProgramsViewModel.ClassName(c) : Tr.T("нет в списке"), "RowValue", new Thickness(0, 0, 8, 0));
+        var mark = Text(p.Class is { } c ? ProgramsViewModel.ClassName(c) : Tr.T("not in the list"), "RowValue", new Thickness(0, 0, 8, 0));
         if (p.Class is null) mark.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorTertiaryBrush");
         right.Children.Add(mark);
-        var add = new WpfUiButton { Icon = SymbolRegular.Add24, ToolTip = Tr.T("В список") };
+        var add = new WpfUiButton { Icon = SymbolRegular.Add24, ToolTip = Tr.T("Add to the list") };
         add.Click += (_, _) => Safe("process menu", () =>
         {
             var menu = new ContextMenu { PlacementTarget = add };       // built on the click: a list has hundreds of rows

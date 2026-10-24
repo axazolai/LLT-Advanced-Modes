@@ -103,5 +103,5 @@ public sealed class ProfileEditorViewModel
         }
     }
 
-    public Task<string?> SaveAsync() => _list.TrySaveAsync(DraftConfig, Tr.F("Профиль «{0}» сохранён", Name));
+    public Task<string?> SaveAsync() => _list.TrySaveAsync(DraftConfig, Tr.F("Profile \"{0}\" saved", Name));
 }

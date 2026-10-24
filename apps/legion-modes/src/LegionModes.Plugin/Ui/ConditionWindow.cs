@@ -29,35 +29,35 @@ public sealed class ConditionWindow : BaseWindow
 
     static (string Axis, SymbolRegular Icon, Value[] Values)[] ConditionAxes() =>
     [
-        ("Источник питания", SymbolRegular.PlugConnected24,
+        ("Power source", SymbolRegular.PlugConnected24,
         [
-            new("Источник питания", Tr.T("Сеть"), SymbolRegular.PlugConnected24, c => c with { Source = PowerSource.Ac }, c => c.Source == PowerSource.Ac),
-            new("Источник питания", Tr.T("Слабый адаптер"), SymbolRegular.UsbPlug24, c => c with { Source = PowerSource.Weak }, c => c.Source == PowerSource.Weak),
-            new("Источник питания", Tr.T("Батарея"), SymbolRegular.Battery524, c => c with { Source = PowerSource.Battery }, c => c.Source == PowerSource.Battery),
+            new("Power source", Tr.T("Mains"), SymbolRegular.PlugConnected24, c => c with { Source = PowerSource.Ac }, c => c.Source == PowerSource.Ac),
+            new("Power source", Tr.T("Weak adapter"), SymbolRegular.UsbPlug24, c => c with { Source = PowerSource.Weak }, c => c.Source == PowerSource.Weak),
+            new("Power source", Tr.T("Battery"), SymbolRegular.Battery524, c => c with { Source = PowerSource.Battery }, c => c.Source == PowerSource.Battery),
         ]),
-        ("Ноутбук", SymbolRegular.Laptop24,
+        ("Laptop", SymbolRegular.Laptop24,
         [
-            new("Ноутбук", Tr.T("Открыт"), SymbolRegular.Laptop24, c => c with { Lid = LidState.Open }, c => c.Lid == LidState.Open),
-            new("Ноутбук", Tr.T("Закрыт"), SymbolRegular.Sleep24, c => c with { Lid = LidState.Closed }, c => c.Lid == LidState.Closed),
+            new("Laptop", Tr.T("Open"), SymbolRegular.Laptop24, c => c with { Lid = LidState.Open }, c => c.Lid == LidState.Open),
+            new("Laptop", Tr.T("Lid closed"), SymbolRegular.Sleep24, c => c with { Lid = LidState.Closed }, c => c.Lid == LidState.Closed),
         ]),
-        ("Нагрузка", SymbolRegular.Gauge24,
+        ("Workload", SymbolRegular.Gauge24,
         [
-            new("Нагрузка", Tr.T("Тяжёлая"), SymbolRegular.Flash24, c => c with { Load = Workload.Heavy }, c => c.Load == Workload.Heavy),
-            new("Нагрузка", Tr.T("ИИ"), SymbolRegular.BrainCircuit24, c => c with { Load = Workload.Ai }, c => c.Load == Workload.Ai),
-            new("Нагрузка", Tr.T("Работа"), SymbolRegular.Window24, c => c with { Load = Workload.Work }, c => c.Load == Workload.Work),
-            new("Нагрузка", Tr.T("Простой"), SymbolRegular.WeatherMoon24, c => c with { Load = Workload.Idle }, c => c.Load == Workload.Idle),
+            new("Workload", Tr.T("Heavy"), SymbolRegular.Flash24, c => c with { Load = Workload.Heavy }, c => c.Load == Workload.Heavy),
+            new("Workload", Tr.T("AI"), SymbolRegular.BrainCircuit24, c => c with { Load = Workload.Ai }, c => c.Load == Workload.Ai),
+            new("Workload", Tr.T("Work"), SymbolRegular.Window24, c => c with { Load = Workload.Work }, c => c.Load == Workload.Work),
+            new("Workload", Tr.T("Idle"), SymbolRegular.WeatherMoon24, c => c with { Load = Workload.Idle }, c => c.Load == Workload.Idle),
         ]),
-        ("Внешний монитор", SymbolRegular.Desktop24,
+        ("External monitor", SymbolRegular.Desktop24,
         [
-            new("Внешний монитор", Tr.T("Подключён"), SymbolRegular.Desktop24, c => c with { Monitor = MonitorState.Connected }, c => c.Monitor == MonitorState.Connected),
-            new("Внешний монитор", Tr.T("Не подключён"), SymbolRegular.Laptop24, c => c with { Monitor = MonitorState.None }, c => c.Monitor == MonitorState.None),
+            new("External monitor", Tr.T("Connected"), SymbolRegular.Desktop24, c => c with { Monitor = MonitorState.Connected }, c => c.Monitor == MonitorState.Connected),
+            new("External monitor", Tr.T("Not connected"), SymbolRegular.Laptop24, c => c with { Monitor = MonitorState.None }, c => c.Monitor == MonitorState.None),
         ]),
     ];
 
     readonly ProfilesViewModel _vm;
     readonly Guid? _except;
     readonly StackPanel _content = new() { Margin = new Thickness(0, 0, 12, 0) };
-    readonly WpfUiTextBox _search = new() { Margin = new Thickness(12, 0, 12, 12), Icon = SymbolRegular.Search24, PlaceholderText = Tr.T("Фильтр") };
+    readonly WpfUiTextBox _search = new() { Margin = new Thickness(12, 0, 12, 12), Icon = SymbolRegular.Search24, PlaceholderText = Tr.T("Filter") };
     readonly TextBlock _summary = new() { Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     readonly WpfUiButton _ok = new() { MinWidth = 100, Margin = new Thickness(8, 0, 0, 0), Appearance = ControlAppearance.Primary };
     Conditions _current;
@@ -68,7 +68,7 @@ public sealed class ConditionWindow : BaseWindow
         _vm = vm;
         _except = except;
         _current = start;
-        Title = Tr.T("Условия профиля");
+        Title = Tr.T("Profile conditions");
         Width = 600;
         Height = 640;
         MinWidth = 500;
@@ -87,7 +87,7 @@ public sealed class ConditionWindow : BaseWindow
     // Returns the chosen conditions, or null when cancelled.
     public static Task<Conditions?> AskAsync(Window? owner, ProfilesViewModel vm, Conditions? start, Guid? except, string? okText = null)
     {
-        var w = new ConditionWindow(vm, start ?? new Conditions(), except, okText ?? Tr.T("Создать")) { Owner = owner };
+        var w = new ConditionWindow(vm, start ?? new Conditions(), except, okText ?? Tr.T("Create")) { Owner = owner };
         w.ShowDialog();
         return Task.FromResult(w._result);
     }
@@ -115,7 +115,7 @@ public sealed class ConditionWindow : BaseWindow
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var cancel = new WpfUiButton { MinWidth = 100, Margin = new Thickness(8, 0, 0, 0), Content = Tr.T("Отмена") };
+        var cancel = new WpfUiButton { MinWidth = 100, Margin = new Thickness(8, 0, 0, 0), Content = Tr.T("Cancel") };
         cancel.Click += (_, _) => Close();
         Grid.SetColumn(_ok, 1);
         Grid.SetColumn(cancel, 2);
@@ -143,9 +143,9 @@ public sealed class ConditionWindow : BaseWindow
         var holder = _vm.Holder(_current, _except);
         var empty = _current.Specificity == 0;
         _ok.IsEnabled = !empty && holder is null;
-        _summary.Text = empty ? Tr.T("Выберите хотя бы одно условие")
-            : holder is not null ? Tr.F("Такие условия уже у профиля «{0}»", holder.Name)
-            : Tr.F("Профиль: {0}", ProfileNames.FromConditionsShown(_current));
+        _summary.Text = empty ? Tr.T("Choose at least one condition")
+            : holder is not null ? Tr.F("Profile \"{0}\" already has these conditions", holder.Name)
+            : Tr.F("Profile: {0}", ProfileNames.FromConditionsShown(_current));
     }
 
     static UIElement AxisHeader(string axis, SymbolRegular icon)
@@ -168,7 +168,7 @@ public sealed class ConditionWindow : BaseWindow
         var mark = new SymbolIcon { Symbol = on ? SymbolRegular.Checkmark24 : SymbolRegular.ChevronRight24 };
         if (on) mark.SetResourceReference(Control.ForegroundProperty, "SystemAccentColorSecondaryBrush");
         var header = new CardHeaderControl { Title = v.Label, Accessory = mark };
-        if (holder is not null) header.Warning = Tr.F("с ним — как у профиля «{0}»", holder.Name);
+        if (holder is not null) header.Warning = Tr.F("with it: same as profile \"{0}\"", holder.Name);
 
         var card = new CardControl { Icon = v.Icon, Header = header, Margin = new Thickness(0, 8, 0, 0) };
         card.Click += (_, _) => { _current = next; SafeRender(); };
@@ -177,9 +177,9 @@ public sealed class ConditionWindow : BaseWindow
 
     static Conditions Clear(string axis, Conditions c) => axis switch
     {
-        "Источник питания" => c with { Source = null },
-        "Ноутбук" => c with { Lid = null },
-        "Нагрузка" => c with { Load = null },
+        "Power source" => c with { Source = null },
+        "Laptop" => c with { Lid = null },
+        "Workload" => c with { Load = null },
         _ => c with { Monitor = null },
     };
 

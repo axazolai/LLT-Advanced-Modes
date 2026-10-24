@@ -9,15 +9,15 @@ internal static class Texts
 {
     public static IReadOnlyDictionary<ParameterId, string> Parameter => new Dictionary<ParameterId, string>
     {
-        [ParameterId.Power] = Tr.T("Мощность и вентиляторы"),
-        [ParameterId.Gpu] = Tr.T("Режим видеокарты"),
-        [ParameterId.Panel] = Tr.T("Частота встроенного экрана"),
-        [ParameterId.External] = Tr.T("Внешний монитор"),
-        [ParameterId.Charging] = Tr.T("Зарядка"),
-        [ParameterId.Usb] = Tr.T("USB во сне"),
-        [ParameterId.Processor] = Tr.T("Процессор и схема Windows"),
-        [ParameterId.Timers] = Tr.T("Таймеры простоя"),
-        [ParameterId.Lighting] = Tr.T("Подсветка"),
+        [ParameterId.Power] = Tr.T("Power and fans"),
+        [ParameterId.Gpu] = Tr.T("GPU mode"),
+        [ParameterId.Panel] = Tr.T("Built-in display refresh rate"),
+        [ParameterId.External] = Tr.T("External monitor"),
+        [ParameterId.Charging] = Tr.T("Charging"),
+        [ParameterId.Usb] = Tr.T("USB in sleep"),
+        [ParameterId.Processor] = Tr.T("Processor and Windows plan"),
+        [ParameterId.Timers] = Tr.T("Idle timers"),
+        [ParameterId.Lighting] = Tr.T("Lighting"),
     };
 
     public static readonly IReadOnlyDictionary<ParameterId, SymbolRegular> ParameterIcon = new Dictionary<ParameterId, SymbolRegular>
@@ -57,23 +57,34 @@ internal static class Texts
         _ => SymbolRegular.WeatherMoon24,
     };
 
-    public static string Seconds(int s) => s % 60 == 0 && s > 0 ? Tr.F("{0} мин", s / 60) : Tr.F("{0} с", s);
+    public static string Seconds(int s) => s % 60 == 0 && s > 0 ? Tr.F("{0} min", s / 60) : Tr.F("{0} s", s);
 
     // "Сеть, открыт · удержание 1 мин · задаёт 4 параметра"
-    public static string ProfileSummary(Profile p)
+    // Levels beyond the first: one dot per level in the left gutter of the card, 16 px of indent per level (the list shows the hierarchy).
+    public static int Level(Profile p) => p.Kind == ProfileKind.Automatic && p.Conditions.Specificity > 1 ? p.Conditions.Specificity - 1 : 0;
+
+    public const double LevelStep = 16;
+
+    // The dots sit 3 px left of the centre of their column (owner 2026-10-22, by his guide lines).
+    public const double LevelDotShift = -3;
+
+    public static double LevelIndent(Profile p) => LevelStep * Level(p);
+
+    public static string ProfileSummary(Profile p, IReadOnlyList<Profile>? parents = null)
     {
         var parts = new List<string>();
         parts.Add(p.Kind switch
         {
-            ProfileKind.Root => Tr.T("Действует всегда, когда не подходит ни один другой"),
-            ProfileKind.Manual => Tr.T("Включается вручную, только от батареи"),
-            _ => Tr.F("Условия: {0}", ProfileNames.FromConditionsShown(p.Conditions)),
+            ProfileKind.Root => Tr.T("In force whenever no other profile matches"),
+            ProfileKind.Manual => Tr.T("Switched on by hand, on battery only"),
+            _ => Tr.F("Conditions: {0}", ProfileNames.FromConditionsShown(p.Conditions)),
         });
-        if (p.DelaySec > 0) parts.Add(Tr.F("задержка {0}", Seconds(p.DelaySec)));
-        if (p.HoldSec > 0) parts.Add(Tr.F("удержание {0}", Seconds(p.HoldSec)));
+        if (p.DelaySec > 0) parts.Add(Tr.F("delay {0}", Seconds(p.DelaySec)));
+        if (p.HoldSec > 0) parts.Add(Tr.F("hold {0}", Seconds(p.HoldSec)));
         var set = Enum.GetValues<ParameterId>().Count(p.Set.IsSet);
-        parts.Add(set == 0 ? Tr.T("всё наследует") : Tr.F("задаёт {0}", Plural(set, "параметр", "параметра", "параметров")));
-        if (p.Pipelines.Count > 0) parts.Add(Plural(p.Pipelines.Count, "действие", "действия", "действий"));
+        if (parents is { Count: > 0 }) parts.Add(Tr.F("inherits from: {0}", string.Join(", ", parents.Select(ProfileNames.Display))));
+        parts.Add(set == 0 ? Tr.T("inherits everything") : Tr.F("sets {0}", Plural(set, "parameter", "parameters", "parameters|2")));
+        if (p.Pipelines.Count > 0) parts.Add(Plural(p.Pipelines.Count, "action", "actions|2", "actions"));
         return string.Join(" · ", parts);
     }
 

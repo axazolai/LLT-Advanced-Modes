@@ -51,25 +51,25 @@ public sealed class DeviceStatus : INotifyPropertyChanged, IDisposable
     // The last switch kept in control.json, read at start (before any key event).
     public void RestoreSwitch(CameraSwitch? last) { if (_switch is null) Switch = last; }
 
-    public string MicrophoneWord => MicMuted switch { true => Tr.T("выключен"), false => Tr.T("включён"), _ => Tr.T("нет данных") };
-    public string CameraPresence => Camera switch { CameraState.Present => Tr.T("подключена"), CameraState.Absent => Tr.T("не найдена"), _ => Tr.T("нет данных") };
+    public string MicrophoneWord => MicMuted switch { true => Tr.T("off"), false => Tr.T("on|2"), _ => Tr.T("no data") };
+    public string CameraPresence => Camera switch { CameraState.Present => Tr.T("connected"), CameraState.Absent => Tr.T("not found"), _ => Tr.T("no data") };
 
     // «выключена (по последнему переключению, 14:32)», «неизвестно» before the first key event.
-    public string SwitchText => Switch is { } s ? Tr.F("{0} (по последнему переключению, {1})", s.Off ? Tr.T("выключена") : Tr.T("включена"), When(s.At)) : Tr.T("неизвестно");
+    public string SwitchText => Switch is { } s ? Tr.F("{0} (by the last switch, {1})", s.Off ? Tr.T("off|2") : Tr.T("on"), When(s.At)) : Tr.T("unknown");
 
-    public string MicrophoneText => Tr.F("Микрофон: {0}{1}", MicrophoneWord, Users(MicInUseBy));
+    public string MicrophoneText => Tr.F("Microphone: {0}{1}", MicrophoneWord, Users(MicInUseBy));
 
-    public string CameraText => Tr.F("Камера: {0}{1}", Camera == CameraState.Absent || Switch is null ? CameraPresence : Switch.Off ? Tr.T("выключена") : Tr.T("включена"), Users(CameraInUseBy));
+    public string CameraText => Tr.F("Camera: {0}{1}", Camera == CameraState.Absent || Switch is null ? CameraPresence : Switch.Off ? Tr.T("off|2") : Tr.T("on"), Users(CameraInUseBy));
 
     // The tray's one line: «Микрофон включён · камера выключена (14:32)».
     public string ShortText
     {
         get
         {
-            var camera = Camera == CameraState.Absent ? Tr.T("не найдена")
-                : Switch is { } s ? $"{(s.Off ? Tr.T("выключена") : Tr.T("включена"))} ({When(s.At)})"
+            var camera = Camera == CameraState.Absent ? Tr.T("not found")
+                : Switch is { } s ? $"{(s.Off ? Tr.T("off|2") : Tr.T("on"))} ({When(s.At)})"
                 : CameraPresence;
-            return Tr.F("Микрофон {0} · камера {1}", MicrophoneWord, camera);
+            return Tr.F("Microphone {0} · camera {1}", MicrophoneWord, camera);
         }
     }
 
@@ -79,7 +79,7 @@ public sealed class DeviceStatus : INotifyPropertyChanged, IDisposable
         return local.Date == DateTime.Today ? local.ToString("HH:mm") : local.ToString("dd.MM HH:mm");
     }
 
-    static string Users(string[] apps) => apps.Length == 0 ? "" : Tr.F("; используют: {0}", UsersList(apps));
+    static string Users(string[] apps) => apps.Length == 0 ? "" : Tr.F("; used by: {0}", UsersList(apps));
 
     public static string UsersList(string[] apps) => string.Join(", ", apps.Select(Friendly));
 

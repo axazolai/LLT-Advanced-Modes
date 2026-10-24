@@ -16,6 +16,9 @@ public sealed record KeeperAlive(DateTimeOffset At) : Message;
 public enum QuickActionKind { WorkloadAuto, WorkloadHeavy, WorkloadAi, WorkloadWork, WorkloadIdle, Autonomy, StayAwake,
     RapidCharge, ChargeFull, Microphone, Pause, DGpu }
 public sealed record QuickAction(QuickActionKind Kind) : Message;       // desktop menu -> plugin, on the quick pipe only
+public sealed record ReleaseGpu(int Seconds) : Message;                 // plugin -> keeper: the card is about to be ejected, let go of it
+public sealed record GpuLiveRequest : Message;                          // plugin -> keeper: the card's state now, and read it every step while asked
+public sealed record GpuLiveReply(bool Awake, int? TempC, int? MemoryC, int? LoadPercent, DateTimeOffset At) : Message;
 public sealed record Ack(bool Ok, string? Error = null) : Message;
 
 public static class MessageCodec

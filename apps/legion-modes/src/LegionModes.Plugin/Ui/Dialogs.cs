@@ -14,11 +14,11 @@ internal sealed class Dialogs(DependencyObject page) : IDialogs
     Window? Owner => Window.GetWindow(page);
 
     public Task<bool> ConfirmAsync(string title, string message, string yes) =>
-        MessageBoxHelper.ShowAsync(page, title, message, yes, Tr.T("Отмена"));
+        MessageBoxHelper.ShowAsync(page, title, message, yes, Tr.T("Cancel"));
 
     public Task<string?> PromptAsync(string title, string placeholder, string initial) =>
         Owner is { } owner
-            ? MessageBoxHelper.ShowInputAsync(owner, title, placeholder, initial, Tr.T("Сохранить"), Tr.T("Отмена"))
+            ? MessageBoxHelper.ShowInputAsync(owner, title, placeholder, initial, Tr.T("Save"), Tr.T("Cancel"))
             : Task.FromResult<string?>(null);
 
     public void ShowGodModeWindow() => new GodModeSettingsWindow { Owner = Owner }.ShowDialog();

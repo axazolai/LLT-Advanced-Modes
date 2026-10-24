@@ -17,13 +17,17 @@
                     </StackPanel>
                     <TextBlock x:Name="_hint" Style="{StaticResource SubLine}" />
                 </StackPanel>
-                <wpfui:Button
-                    x:Name="_addButton"
-                    Grid.Column="1"
-                    Margin="16,0,0,0"
-                    VerticalAlignment="Top"
-                    Appearance="Primary"
-                    Icon="Add24" />
+                <StackPanel Grid.Column="1" Margin="16,0,0,0" Orientation="Horizontal" VerticalAlignment="Top">
+                    <wpfui:Button
+                        x:Name="_sortButton"
+                        Margin="0,0,8,0"
+                        Appearance="Secondary"
+                        Icon="TextSortAscending24" />
+                    <wpfui:Button
+                        x:Name="_addButton"
+                        Appearance="Primary"
+                        Icon="Add24" />
+                </StackPanel>
             </Grid>
             <TextBlock Margin="0,0,0,8" Style="{StaticResource MessageText}" Text="{Binding Message}"
                        Visibility="{Binding HasMessage, Converter={StaticResource B2V}}" />

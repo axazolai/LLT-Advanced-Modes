@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <Version>1.1.0</Version>
+    <!-- The build folder must not reach the binaries (the pdb path in each dll, the source paths in each pdb): the release is public. -->
+    <PathMap>$(MSBuildThisFileDirectory)=C:\src\LegionModes\</PathMap>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);MSB3277</NoWarn>
     <!-- The commit id must not reach the binaries (assembly version, source link in the pdb): the payload hash follows content only. -->

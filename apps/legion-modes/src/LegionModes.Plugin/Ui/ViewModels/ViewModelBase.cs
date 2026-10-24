@@ -28,27 +28,27 @@ public static class Options
 {
     public static IReadOnlyList<Option<GpuMode>> Gpu =>
     [
-        new(GpuMode.Hybrid, Tr.T("Гибридный")), new(GpuMode.HybridIgpuOnly, Tr.T("Только встроенная")), new(GpuMode.HybridAuto, Tr.T("Авто")),
+        new(GpuMode.Hybrid, Tr.T("Hybrid")), new(GpuMode.HybridIgpuOnly, Tr.T("Integrated only")), new(GpuMode.HybridAuto, Tr.T("Auto")),
     ];
     public static IReadOnlyList<Option<ChargingMode>> Charging =>
     [
-        new(ChargingMode.DoNotTouch, Tr.T("Не трогать")), new(ChargingMode.Conservation, Tr.T("Сбережение")),
-        new(ChargingMode.Normal, Tr.T("Обычная")), new(ChargingMode.Rapid, Tr.T("Быстрая")),
+        new(ChargingMode.DoNotTouch, Tr.T("Do not touch")), new(ChargingMode.Conservation, Tr.T("Conservation")),
+        new(ChargingMode.Normal, Tr.T("Normal")), new(ChargingMode.Rapid, Tr.T("Fast")),
     ];
     public static IReadOnlyList<Option<UsbPower>> Usb =>
     [
-        new(UsbPower.Off, Tr.T("Выключено")), new(UsbPower.WhenSleeping, Tr.T("Во сне")), new(UsbPower.Always, Tr.T("Всегда")),
+        new(UsbPower.Off, Tr.T("Off")), new(UsbPower.WhenSleeping, Tr.T("While sleeping")), new(UsbPower.Always, Tr.T("Always")),
     ];
     public static IReadOnlyList<Option<Projection>> Projection =>
     [
-        new(LegionModes.Core.Model.Projection.DoNotTouch, Tr.T("Не трогать")), new(LegionModes.Core.Model.Projection.Extend, Tr.T("Расширить")),
-        new(LegionModes.Core.Model.Projection.ExternalOnly, Tr.T("Только внешний")), new(LegionModes.Core.Model.Projection.Duplicate, Tr.T("Дублировать")),
-        new(LegionModes.Core.Model.Projection.InternalOnly, Tr.T("Только встроенный")),
+        new(LegionModes.Core.Model.Projection.DoNotTouch, Tr.T("Do not touch")), new(LegionModes.Core.Model.Projection.Extend, Tr.T("Extend")),
+        new(LegionModes.Core.Model.Projection.ExternalOnly, Tr.T("External only")), new(LegionModes.Core.Model.Projection.Duplicate, Tr.T("Duplicate")),
+        new(LegionModes.Core.Model.Projection.InternalOnly, Tr.T("Built-in only")),
     ];
     public static IReadOnlyList<Option<ExternalRateKind>> ExternalRate =>
     [
-        new(ExternalRateKind.DoNotTouch, Tr.T("Не трогать")), new(ExternalRateKind.Maximum, Tr.T("Максимальная")),
-        new(ExternalRateKind.Fixed, Tr.T("Фиксированная")),
+        new(ExternalRateKind.DoNotTouch, Tr.T("Do not touch")), new(ExternalRateKind.Maximum, Tr.T("Maximum")),
+        new(ExternalRateKind.Fixed, Tr.T("Fixed|2")),
     ];
     public static IReadOnlyList<int> PanelHz { get; } = FirmwareRanges.PanelHz;
     public static IReadOnlyList<int> LightingProfiles { get; } = [1, 2, 3, 4, 5, 6];

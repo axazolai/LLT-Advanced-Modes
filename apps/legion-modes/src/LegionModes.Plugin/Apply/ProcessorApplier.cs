@@ -7,9 +7,9 @@ namespace LegionModes.Plugin.Apply;
 // re-activated so they take effect, then the Windows power mode (overlay). DoNotTouch writes nothing.
 internal static class ProcessorApplier
 {
-    static readonly Guid SubProcessor = new("54533251-82be-4824-96c1-47b60b740d00");
-    static readonly Guid ProcessorBoost = new("be337238-0d82-4146-a960-4f3749d470c7");
-    static readonly Guid ProcessorEpp = new("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
+    internal static readonly Guid SubProcessor = new("54533251-82be-4824-96c1-47b60b740d00");
+    internal static readonly Guid ProcessorBoost = new("be337238-0d82-4146-a960-4f3749d470c7");
+    internal static readonly Guid ProcessorEpp = new("36687f9e-e3a5-4dbf-b1dc-15eb381c6863");
 
     // scheme: the one stored in the control record; null = the active scheme. Boost: Enabled is Windows "Aggressive"
     // (index 2), Disabled is 0. EPP in percent. Throws when a write does not read back.

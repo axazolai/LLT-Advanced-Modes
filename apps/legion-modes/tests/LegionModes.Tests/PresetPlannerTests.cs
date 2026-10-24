@@ -70,7 +70,7 @@ public sealed class PresetPlannerTests : IDisposable
             var unmapped = PresetPlanner.Plan(Factory, presets, new Dictionary<Guid, Guid>(), None, prune: false);   // adopted by name, not created again
             Assert.Equal(presets.Keys.Single(), unmapped.Map[bat.Id]);
         }
-        finally { Tr.Reset(); }
+        finally { TestLang.Russian(); }
     }
 
     [Fact(DisplayName = "@critical presets of the first model (LM label, leaf key) are removed when the config loaded; other unmapped presets stay")]

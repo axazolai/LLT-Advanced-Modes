@@ -141,7 +141,7 @@ internal sealed class ListDrag
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var text = new TextBlock { Text = Tr.T("Вставить сюда"), FontSize = 12, Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
+        var text = new TextBlock { Text = Tr.T("Insert here"), FontSize = 12, Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
         text.SetResourceReference(TextBlock.ForegroundProperty, "SystemAccentColorSecondaryBrush");
         Grid.SetColumn(text, 1);
         grid.Children.Add(Dash(0));

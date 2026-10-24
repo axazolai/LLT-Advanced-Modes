@@ -38,6 +38,57 @@ internal static class WindowsPower
     [DllImport("kernel32.dll")]
     static extern IntPtr LocalFree(IntPtr mem);
 
+    [DllImport("powrprof.dll")]
+    static extern uint PowerGetEffectiveOverlayScheme(out Guid overlay);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct SystemPowerStatus
+    {
+        public byte ACLineStatus, BatteryFlag, BatteryLifePercent, SystemStatusFlag;
+        public int BatteryLifeTime, BatteryFullLifeTime;
+    }
+
+    [DllImport("kernel32.dll")]
+    static extern bool GetSystemPowerStatus(out SystemPowerStatus status);
+
+    static readonly Guid OverlayBestPowerEfficiency = new("961cc777-2547-4f9d-8174-7d86181b8a7a");
+    static readonly Guid OverlayBestPerformance = new("ded574b5-45a0-4f42-8737-46345c09c238");
+
+    // The four stage timers of the active scheme on the present power source, read live from the system.
+    internal static (LegionModes.Core.Engine.WindowsTimerValues Values, bool OnBattery) ReadTimers()
+    {
+        var scheme = ActiveScheme();
+        var onBattery = GetSystemPowerStatus(out var status) && status.ACLineStatus == 0;
+        uint Read(Guid sub, Guid setting)
+        {
+            var rc = onBattery ? PowerReadDCValueIndex(IntPtr.Zero, ref scheme, ref sub, ref setting, out var v) : PowerReadACValueIndex(IntPtr.Zero, ref scheme, ref sub, ref setting, out v);
+            if (rc != 0) throw new ApplyResultException($"read timer failed: {rc}");
+            return v;
+        }
+        return (new LegionModes.Core.Engine.WindowsTimerValues(Read(SubVideo, VideoDim), Read(SubVideo, VideoDimmedBrightness), Read(SubVideo, VideoIdle),
+            Read(SubSleep, StandbyIdle), Read(SubSleep, HibernateIdle), null), onBattery);
+    }
+
+    // What Windows holds now for the processor: the boost and EPP indexes of the active scheme on the present power source, and the power
+    // mode overlay (null when it is none of the three the plugin sets). Read live from the system.
+    internal static (uint? Boost, uint? Epp, Core.Model.WindowsPowerMode? Overlay, bool OnBattery) ReadProcessor()
+    {
+        var scheme = ActiveScheme();
+        var sub = ProcessorApplier.SubProcessor;
+        var boostId = ProcessorApplier.ProcessorBoost;
+        var eppId = ProcessorApplier.ProcessorEpp;
+        var onBattery = GetSystemPowerStatus(out var status) && status.ACLineStatus == 0;
+        uint? Read(Guid setting) =>
+            (onBattery ? PowerReadDCValueIndex(IntPtr.Zero, ref scheme, ref sub, ref setting, out var v) : PowerReadACValueIndex(IntPtr.Zero, ref scheme, ref sub, ref setting, out v)) == 0
+                ? v : null;
+        Core.Model.WindowsPowerMode? overlay = null;
+        if (PowerGetEffectiveOverlayScheme(out var o) == 0)
+            overlay = o == Guid.Empty ? Core.Model.WindowsPowerMode.Balanced
+                : o == OverlayBestPowerEfficiency ? Core.Model.WindowsPowerMode.BestPowerEfficiency
+                : o == OverlayBestPerformance ? Core.Model.WindowsPowerMode.BestPerformance : null;
+        return (Read(boostId), Read(eppId), overlay, onBattery);
+    }
+
     internal static Guid ActiveScheme()
     {
         var rc = PowerGetActiveScheme(IntPtr.Zero, out var p);
@@ -79,6 +130,6 @@ internal static class WindowsPower
         rc = PowerReadDCValueIndex(IntPtr.Zero, ref scheme, ref subGroup, ref setting, out var dc);
         if (rc != 0) throw new ApplyResultException($"read DC {what} failed: {rc}");
         if (ac != value || dc != value)
-            throw new ApplyResultException(Tr.F("{0}: записано {1}, прочитано AC {2} / DC {3}", what, value, ac, dc));
+            throw new ApplyResultException(Tr.F("{0}: written {1}, read back AC {2} / DC {3}", what, value, ac, dc));
     }
 }

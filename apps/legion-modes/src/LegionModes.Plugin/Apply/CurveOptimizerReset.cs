@@ -33,7 +33,7 @@ public static class CurveOptimizerReset
             if (await IoCContainer.Resolve<PowerModeFeature>().GetStateAsync().ConfigureAwait(false) == PowerModeState.GodMode)
             {
                 var (applied, _) = await gm.ApplyStateWithResultAsync().ConfigureAwait(false);
-                if (!applied) throw new InvalidOperationException(Tr.T("GodMode не применён: Vantage / Legion Space / Legion Zone включены"));
+                if (!applied) throw new InvalidOperationException(Tr.T("GodMode not applied: Vantage / Legion Space / Legion Zone are on"));
             }
         }
         finally { GodModePresets.Gate.Release(); }

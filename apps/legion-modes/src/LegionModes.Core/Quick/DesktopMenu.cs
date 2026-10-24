@@ -18,22 +18,22 @@ public static class DesktopMenu
 
         var items = new List<MenuItem>
         {
-            new("workload", Tr.T("Нагрузка"), null,
+            new("workload", Tr.T("Workload"), null,
             [
-                Leaf(QuickActionKind.WorkloadAuto, Mark(s.Forced is null, Tr.T("Авто"))),
-                Leaf(QuickActionKind.WorkloadHeavy, Mark(s.Forced == Workload.Heavy, Tr.T("Тяжёлая"))),
-                Leaf(QuickActionKind.WorkloadAi, Mark(s.Forced == Workload.Ai, Tr.T("ИИ"))),
-                Leaf(QuickActionKind.WorkloadWork, Mark(s.Forced == Workload.Work, Tr.T("Работа"))),
-                Leaf(QuickActionKind.WorkloadIdle, Mark(s.Forced == Workload.Idle, Tr.T("Простой"))),
+                Leaf(QuickActionKind.WorkloadAuto, Mark(s.Forced is null, Tr.T("Auto"))),
+                Leaf(QuickActionKind.WorkloadHeavy, Mark(s.Forced == Workload.Heavy, Tr.T("Heavy"))),
+                Leaf(QuickActionKind.WorkloadAi, Mark(s.Forced == Workload.Ai, Tr.T("AI"))),
+                Leaf(QuickActionKind.WorkloadWork, Mark(s.Forced == Workload.Work, Tr.T("Work"))),
+                Leaf(QuickActionKind.WorkloadIdle, Mark(s.Forced == Workload.Idle, Tr.T("Idle"))),
             ]),
         };
-        if (s.OnBattery) items.Add(Leaf(QuickActionKind.Autonomy, Mark(s.AutonomyOn, Tr.T("Автономия"))));
-        items.Add(Leaf(QuickActionKind.StayAwake, Mark(s.StayAwake, Tr.T("Не спать"))));
-        items.Add(Leaf(QuickActionKind.RapidCharge, Mark(s.RapidCharge, Tr.T("Быстрая зарядка"))));
-        items.Add(Leaf(QuickActionKind.ChargeFull, Mark(s.ChargeFull, Tr.T("Зарядить до 100 %"))));
-        items.Add(Leaf(QuickActionKind.Microphone, s.MicrophoneMuted ? "✓ " + Tr.T("Микрофон выключен") : Tr.T("Микрофон")));
-        items.Add(Leaf(QuickActionKind.Pause, Mark(s.Paused, Tr.T("Пауза"))));
+        if (s.OnBattery) items.Add(Leaf(QuickActionKind.Autonomy, Mark(s.AutonomyOn, Tr.T("Autonomy"))));
+        items.Add(Leaf(QuickActionKind.StayAwake, Mark(s.StayAwake, Tr.T("Stay awake"))));
+        items.Add(Leaf(QuickActionKind.RapidCharge, Mark(s.RapidCharge, Tr.T("Rapid charge"))));
+        items.Add(Leaf(QuickActionKind.ChargeFull, Mark(s.ChargeFull, Tr.T("Charge to 100 %"))));
+        items.Add(Leaf(QuickActionKind.Microphone, s.MicrophoneMuted ? "✓ " + Tr.T("Microphone off") : Tr.T("Microphone")));
+        items.Add(Leaf(QuickActionKind.Pause, Mark(s.Paused, Tr.T("Pause"))));
         items.Add(Leaf(QuickActionKind.DGpu, "dGPU…"));
-        return new MenuItem("root", Tr.T("Расширенные режимы"), null, items);
+        return new MenuItem("root", Tr.T("Advanced modes"), null, items);
     }
 }

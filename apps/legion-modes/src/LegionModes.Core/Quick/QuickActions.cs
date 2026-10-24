@@ -29,7 +29,7 @@ public static class QuickActions
     public static QuickActionKind? Parse(string arg) =>
         Args.Where(p => p.Value == arg).Select(p => (QuickActionKind?)p.Key).FirstOrDefault();
 
-    public static string AutonomyBatteryOnly => Tr.T("Автономия доступна только от батареи");
+    public static string AutonomyBatteryOnly => Tr.T("Autonomy is available on battery only");
 
     // Engine-side actions. Microphone and DGpu are done by the plugin: Handled = false.
     public static QuickResult Apply(ProfileEngine engine, QuickActionKind k)

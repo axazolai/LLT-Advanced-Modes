@@ -6,46 +6,73 @@ using Xunit;
 
 namespace LegionModes.Tests;
 
-// lang/en.json against the sources: every Tr.T / Tr.F key used in the code has an English text with the same placeholders,
-// and every factory profile name has one (names are shown through Tr.T(profile.Name)).
+// The translation files against the sources. Keys are English: every Tr.T / Tr.F key used in the code is in en.json and in
+// ru.json with the same placeholders; the two files hold the same keys; a key is never Russian.
 public sealed partial class TranslationFileTests
 {
-    [GeneratedRegex("""Tr\.(?:T|F)\(\s*"((?:[^"\\]|\\.)*)"(?<f>\s*[,)])""")]
+    // Tr.T( / Tr.F( then a string literal, then "+ literal" pieces: the key is their concatenation.
+    [GeneratedRegex("""Tr\.(?:T|F)\(\s*(?<l>"(?:[^"\\]|\\.)*"(?:\s*\+\s*"(?:[^"\\]|\\.)*")*)""")]
     private static partial Regex Call();
+
+    [GeneratedRegex("""
+        "((?:[^"\\]|\\.)*)"
+        """)]
+    private static partial Regex Piece();
 
     [GeneratedRegex(@"\{(\d+)(?:[,:][^}]*)?\}")]
     private static partial Regex Placeholder();
 
-    static string AppRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src", "LegionModes.Core"))) dir = dir.Parent;
-        return dir?.FullName ?? throw new DirectoryNotFoundException("apps/legion-modes not found above " + AppContext.BaseDirectory);
-    }
+    [GeneratedRegex(@"[А-Яа-яЁё]")]
+    private static partial Regex Cyrillic();
 
-    static Dictionary<string, string> English() =>
-        JsonSerializer.Deserialize<Dictionary<string, string>>(
-            File.ReadAllText(Path.Combine(AppRoot(), "src", "LegionModes.Plugin", "lang", "en.json")))!;
+    static string LangDir => TestLang.LangDir;
+
+    static string AppRoot() => Path.GetFullPath(Path.Combine(LangDir, "..", "..", ".."));
+
+    static Dictionary<string, string> Load(string name) =>
+        JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(LangDir, name + ".json")))!;
 
     static IEnumerable<string> Placeholders(string text) =>
         Placeholder().Matches(text).Select(m => m.Groups[1].Value).Distinct().OrderBy(x => x);
 
-    [Fact(DisplayName = "@important en.json holds an English text for every Tr key in the code, with the same placeholders")]
-    public void EveryKeyTranslated()
+    static IEnumerable<(string File, string Key)> KeysInCode()
     {
-        var en = English();
-        var problems = new List<string>();
         foreach (var file in Directory.EnumerateFiles(Path.Combine(AppRoot(), "src"), "*.cs", SearchOption.AllDirectories)
                      .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !f.EndsWith("Tr.cs")))
-        {
             foreach (Match m in Call().Matches(File.ReadAllText(file)))
+                yield return (Path.GetFileName(file), string.Concat(Piece().Matches(m.Groups["l"].Value).Select(p => Regex.Unescape(p.Groups[1].Value))));
+    }
+
+    [Fact(DisplayName = "@important every Tr key in the code is English and has a text in en.json and ru.json with the same placeholders")]
+    public void EveryKeyTranslated()
+    {
+        var en = Load("en");
+        var ru = Load("ru");
+        var problems = new List<string>();
+        var keys = KeysInCode().ToList();
+        Assert.True(keys.Count > 400, "the scan found " + keys.Count + " keys: the pattern is broken");
+        foreach (var (file, key) in keys)
+        {
+            if (Cyrillic().IsMatch(key)) problems.Add($"{file}: the key is not English: \"{key}\"");
+            foreach (var (name, map) in new[] { ("en", en), ("ru", ru) })
             {
-                var key = Regex.Unescape(m.Groups[1].Value);
-                if (!en.TryGetValue(key, out var text) || text.Length == 0) problems.Add($"{Path.GetFileName(file)}: no English text for \"{key}\"");
-                else if (!Placeholders(key).SequenceEqual(Placeholders(text))) problems.Add($"{Path.GetFileName(file)}: placeholders differ in \"{key}\"");
+                if (!map.TryGetValue(key, out var text) || text.Length == 0) problems.Add($"{file}: no {name} text for \"{key}\"");
+                else if (!Placeholders(key).SequenceEqual(Placeholders(text))) problems.Add($"{file}: placeholders differ in {name} for \"{key}\"");
             }
         }
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems.Distinct().Take(40)));
+    }
+
+    [Fact(DisplayName = "@important en.json and ru.json hold the same keys; English texts are the keys, Russian texts are Russian")]
+    public void FilesAgree()
+    {
+        var en = Load("en");
+        var ru = Load("ru");
+        Assert.True(en.Keys.ToHashSet().SetEquals(ru.Keys), "en.json and ru.json differ in keys");
+        var wrong = en.Where(kv => Regex.Replace(kv.Key, @"\|\d+$", "") != kv.Value).Select(kv => kv.Key).Take(10).ToList();
+        Assert.True(wrong.Count == 0, "en.json maps a key to other text: " + string.Join("; ", wrong));
+        var notRussian = ru.Where(kv => !Cyrillic().IsMatch(kv.Value) && kv.Value != kv.Key).Select(kv => kv.Key).Take(40).ToList();
+        Assert.True(notRussian.Count < 30, "ru.json holds non-Russian texts for: " + string.Join("; ", notRussian));
     }
 
     [Fact(DisplayName = "@important every built-in profile carries Russian and English names")]

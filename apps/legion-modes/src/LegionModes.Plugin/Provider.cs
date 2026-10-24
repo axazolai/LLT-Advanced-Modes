@@ -33,8 +33,8 @@ public sealed class Provider : IExtensionProvider
             context.Navigation.Register(new ExtensionNavigationItem
             {
                 Id = "legion-modes",
-                Title = Tr.T("Расширенные режимы"),
-                TitleGetter = () => Tr.T("Расширенные режимы"),   // LLT 2.36: read when the menu is built, so a language change shows
+                Title = Tr.T("Advanced modes"),
+                TitleGetter = () => Tr.T("Advanced modes"),   // LLT 2.36: read when the menu is built, so a language change shows
                 PageTag = "legion_modes",
                 PageType = typeof(ModesPage),
                 Icon = ExtensionIcon.Gauge,

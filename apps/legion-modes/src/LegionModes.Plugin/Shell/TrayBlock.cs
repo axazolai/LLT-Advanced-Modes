@@ -99,35 +99,35 @@ internal sealed class TrayBlock : IDisposable
         var forced = d?.Overrides.FirstOrDefault(o => o.Kind == OverrideKind.ForceWorkload)?.Workload;
 
         // «Режим: 18 · Батарея, открыт, работа», with «пауза» or «управление у LLT» when its parameters are not applied.
-        var state = d is null ? "" : d.Paused ? Tr.T(" · пауза") : !_runtime.HasControl ? Tr.T(" · управление у LLT") : "";
+        var state = d is null ? "" : d.Paused ? Tr.T(" · paused") : !_runtime.HasControl ? Tr.T(" · LLT in control") : "";
         yield return new MenuItem
         {
-            Header = d is null ? Tr.T("Режим: нет данных") : Tr.F("Режим: {0}{1}", Ui.ViewModels.StatusViewModel.ProfileTitle(_runtime.Config, d.Profile), state),
+            Header = d is null ? Tr.T("Mode: no data") : Tr.F("Mode: {0}{1}", Ui.ViewModels.StatusViewModel.ProfileTitle(_runtime.Config, d.Profile), state),
             IsEnabled = false, Tag = Tag,
         };
         yield return new MenuItem { Header = _runtime.Devices.ShortText, IsEnabled = false, Tag = Tag };
 
-        var load = new MenuItem { Header = Tr.T("Нагрузка"), Tag = Tag };
-        load.Items.Add(Radio(Tr.T("Авто"), forced is null, QuickActionKind.WorkloadAuto));
-        load.Items.Add(Radio(Tr.T("Тяжёлая"), forced == Workload.Heavy, QuickActionKind.WorkloadHeavy));
-        load.Items.Add(Radio(Tr.T("ИИ"), forced == Workload.Ai, QuickActionKind.WorkloadAi));
-        load.Items.Add(Radio(Tr.T("Работа"), forced == Workload.Work, QuickActionKind.WorkloadWork));
-        load.Items.Add(Radio(Tr.T("Простой"), forced == Workload.Idle, QuickActionKind.WorkloadIdle));
+        var load = new MenuItem { Header = Tr.T("Workload"), Tag = Tag };
+        load.Items.Add(Radio(Tr.T("Auto"), forced is null, QuickActionKind.WorkloadAuto));
+        load.Items.Add(Radio(Tr.T("Heavy"), forced == Workload.Heavy, QuickActionKind.WorkloadHeavy));
+        load.Items.Add(Radio(Tr.T("AI"), forced == Workload.Ai, QuickActionKind.WorkloadAi));
+        load.Items.Add(Radio(Tr.T("Work"), forced == Workload.Work, QuickActionKind.WorkloadWork));
+        load.Items.Add(Radio(Tr.T("Idle"), forced == Workload.Idle, QuickActionKind.WorkloadIdle));
         yield return load;
 
-        if (d?.Axes.Source == PowerSource.Battery) yield return Toggle(Tr.T("Автономия"), Active(OverrideKind.Autonomy), QuickActionKind.Autonomy);
-        yield return Toggle(Tr.T("Не спать"), Active(OverrideKind.StayAwake), QuickActionKind.StayAwake);
-        yield return Toggle(Tr.T("Быстрая зарядка"), Active(OverrideKind.RapidCharge), QuickActionKind.RapidCharge);
-        yield return Toggle(Tr.T("Зарядить до 100 %"), Active(OverrideKind.ChargeFull), QuickActionKind.ChargeFull);
+        if (d?.Axes.Source == PowerSource.Battery) yield return Toggle(Tr.T("Autonomy"), Active(OverrideKind.Autonomy), QuickActionKind.Autonomy);
+        yield return Toggle(Tr.T("Stay awake"), Active(OverrideKind.StayAwake), QuickActionKind.StayAwake);
+        yield return Toggle(Tr.T("Rapid charge"), Active(OverrideKind.RapidCharge), QuickActionKind.RapidCharge);
+        yield return Toggle(Tr.T("Charge to 100 %"), Active(OverrideKind.ChargeFull), QuickActionKind.ChargeFull);
 
-        var mic = new MenuItem { Header = Tr.T("Микрофон"), IsChecked = _runtime.Devices.MicMuted == false, Tag = Tag };   // the check follows the state read after the toggle
+        var mic = new MenuItem { Header = Tr.T("Microphone"), IsChecked = _runtime.Devices.MicMuted == false, Tag = Tag };   // the check follows the state read after the toggle
         mic.Click += (_, _) => Guard("tray microphone", () => Run(QuickActionKind.Microphone));
         yield return mic;
 
         var pause = d?.Overrides.FirstOrDefault(o => o.Kind == OverrideKind.Pause);
-        var header = Tr.T("Пауза");
+        var header = Tr.T("Pause");
         if (pause?.Until is { } until)
-            header = Tr.F("Пауза (ещё {0} мин)", Math.Max(1, (int)Math.Ceiling((until - DateTimeOffset.Now).TotalMinutes)));
+            header = Tr.F("Pause ({0} min left)", Math.Max(1, (int)Math.Ceiling((until - DateTimeOffset.Now).TotalMinutes)));
         yield return Toggle(header, pause is not null, QuickActionKind.Pause);
 
         var dgpu = new MenuItem { Header = "dGPU…", IsCheckable = true, IsChecked = Active(OverrideKind.DGpu), IsEnabled = !Active(OverrideKind.DGpu), Tag = Tag };
@@ -145,7 +145,7 @@ internal sealed class TrayBlock : IDisposable
     void Run(QuickActionKind kind)
     {
         var result = _runtime.Quick(kind);
-        if (result.Error is { } error) Notifier.Show(Tr.F("Режимы: {0}", error));
+        if (result.Error is { } error) Notifier.Show(Tr.F("Advanced modes: {0}", error));
     }
 
     MenuItem Radio(string header, bool selected, QuickActionKind kind)
@@ -174,7 +174,7 @@ internal sealed class TrayBlock : IDisposable
     // «Обновления», bold with the version when a compatible update exists.
     void ShowUpdate(MenuItem item)
     {
-        item.Header = _updateVersion is { } v ? Tr.F("Обновления · доступна {0}", v) : Tr.T("Обновления");
+        item.Header = _updateVersion is { } v ? Tr.F("Updates · {0} available", v) : Tr.T("Updates");
         item.FontWeight = _updateVersion is null ? FontWeights.Normal : FontWeights.Bold;
     }
 

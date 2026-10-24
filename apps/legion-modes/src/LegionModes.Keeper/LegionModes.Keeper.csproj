@@ -4,6 +4,8 @@
     <RootNamespace>LegionModes.Keeper</RootNamespace>
     <AssemblyName>LegionModes.Keeper</AssemblyName>
     <StartupHookSupport>false</StartupHookSupport>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0" />
@@ -12,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\LegionModes.Core\LegionModes.Core.csproj" />
     <ProjectReference Include="..\LegionModes.Updates\LegionModes.Updates.csproj" />
+    <ProjectReference Include="..\LegionModes.Tray\LegionModes.Tray.csproj" />
   </ItemGroup>
 </Project>

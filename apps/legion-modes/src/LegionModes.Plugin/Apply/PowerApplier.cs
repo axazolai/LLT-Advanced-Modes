@@ -71,7 +71,7 @@ internal sealed class PowerApplier(Func<ModesConfig> modes)
             if (await feature.GetStateAsync().ConfigureAwait(false) != target)
                 await feature.SetStateAsync(target).ConfigureAwait(false);
             var now = await feature.GetStateAsync().ConfigureAwait(false);
-            return now == target ? null : Tr.F("режим питания: стоит {0}, ожидался {1}", now, target);
+            return now == target ? null : Tr.F("power mode: is {0}, expected {1}", now, target);
         }
         finally { _lock.Release(); }
     }
@@ -80,18 +80,18 @@ internal sealed class PowerApplier(Func<ModesConfig> modes)
     {
         var gm = IoCContainer.Resolve<GodModeController>();
         var state = await gm.GetStateAsync().ConfigureAwait(false);
-        if (GodModePresets.FindPresetId(state, profile) is not { } id) return Tr.F("пресет GodMode {0} не найден", ProfileNames.PresetLabel(profile));
+        if (GodModePresets.FindPresetId(state, profile) is not { } id) return Tr.F("GodMode preset {0} not found", ProfileNames.PresetLabel(profile));
         _presetProfile = profile;
 
         var power = IoCContainer.Resolve<PowerModeFeature>();
         if (await power.GetStateAsync().ConfigureAwait(false) != PowerModeState.GodMode)
             await power.SetStateAsync(PowerModeState.GodMode, applyGodModePreset: false).ConfigureAwait(false);
         var (applied, software) = await gm.ApplyStateWithResultAsync(state with { ActivePresetId = id }).ConfigureAwait(false);
-        if (!applied) return Tr.F("GodMode не применён: {0}", Describe(software));   // Vantage / Legion Space / Legion Zone enabled
+        if (!applied) return Tr.F("GodMode not applied: {0}", Describe(software));   // Vantage / Legion Space / Legion Zone enabled
 
         var problems = new List<string>();
         var mode = await power.GetStateAsync().ConfigureAwait(false);
-        if (mode != PowerModeState.GodMode) problems.Add(Tr.F("режим питания: стоит {0}, ожидался GodMode", mode));
+        if (mode != PowerModeState.GodMode) problems.Add(Tr.F("power mode: is {0}, expected GodMode", mode));
 
         var preset = state.Presets[id];
         if (preset.FanTableInfo is { } fan)
@@ -99,9 +99,9 @@ internal sealed class PowerApplier(Func<ModesConfig> modes)
             try
             {
                 if (!await gm.SetFanTableWithVerifyAsync(fan.Table).ConfigureAwait(false))
-                    problems.Add(Tr.T("таблица вентиляторов не совпала после записи"));
+                    problems.Add(Tr.T("the fan table did not match after writing"));
             }
-            catch (Exception e) { Log.Error("fan table verify", e); problems.Add(Tr.F("таблица вентиляторов: {0}", e.Message)); }
+            catch (Exception e) { Log.Error("fan table verify", e); problems.Add(Tr.F("fan table: {0}", e.Message)); }
         }
 
         if (await DGpuReadyAsync().ConfigureAwait(false))
@@ -111,7 +111,7 @@ internal sealed class PowerApplier(Func<ModesConfig> modes)
     }
 
     static string Describe(object software) => software?.ToString() is { Length: > 0 } s
-        ? Tr.F("{0} (Vantage / Legion Space / Legion Zone включены)", s) : Tr.T("Vantage / Legion Space / Legion Zone включены");
+        ? Tr.F("{0} (Vantage / Legion Space / Legion Zone are on)", s) : Tr.T("Vantage / Legion Space / Legion Zone are on");
 
     // The preset's GPU values after a dGPU attach. null = fine or nothing to check.
     public async Task<string?> VerifyAfterAttachAsync()
@@ -149,7 +149,7 @@ internal sealed class PowerApplier(Func<ModesConfig> modes)
                 await WMI.LenovoOtherMethod.SetFeatureValueAsync(Id(cap), expected).ConfigureAwait(false);
                 var after = await WMI.LenovoOtherMethod.GetFeatureValueAsync(Id(cap)).ConfigureAwait(false);
                 if (after != expected)
-                    problems.Add(Tr.F("{0}: записано {1}, прочитано {2}", label, wanted, FromFirmware(after)));
+                    problems.Add(Tr.F("{0}: written {1}, read back {2}", label, wanted, FromFirmware(after)));
             }
             catch (Exception e)
             {

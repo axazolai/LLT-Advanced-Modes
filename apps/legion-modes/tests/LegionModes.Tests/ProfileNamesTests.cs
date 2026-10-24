@@ -7,7 +7,7 @@ namespace LegionModes.Tests;
 [Collection("Tr")]
 public sealed class ProfileNamesTests : IDisposable
 {
-    public void Dispose() => Tr.Reset();
+    public void Dispose() => TestLang.Russian();
 
     static Profile Custom(string name, Dictionary<string, string>? names = null) =>
         new(Guid.NewGuid(), name, ProfileKind.Automatic, new Conditions(), 0, 0, new Parameters(), [], [], names);

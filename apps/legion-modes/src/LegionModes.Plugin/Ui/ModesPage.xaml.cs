@@ -27,11 +27,11 @@ public partial class ModesPage : UiPage
         Resources.MergedDictionaries.Add(SharedResources.Instance);   // before InitializeComponent: StaticResource is resolved while loading
         InitializeComponent();
         Tr.FromLlt();   // a page built right after a language change must not wait for the file watcher
-        Title = Tr.T("Расширенные режимы");
-        _waiting.Text = Tr.T("Плагин запускается…");
-        _inForceLabel.Text = Tr.T("Сейчас действует");
-        _effectiveButton.Content = Tr.T("Итоговые действия");
-        string[] tabNames = [Tr.T("Статус"), Tr.T("Профили"), Tr.T("Программы"), Tr.T("Обновления"), Tr.T("Управление")];
+        Title = Tr.T("Advanced modes");
+        _waiting.Text = Tr.T("The plugin is starting…");
+        _inForceLabel.Text = Tr.T("In force now|2");
+        _effectiveButton.Content = Tr.T("Effective actions");
+        string[] tabNames = [Tr.T("Status"), Tr.T("Profiles"), Tr.T("Programs"), Tr.T("Updates"), Tr.T("Control")];
         for (var i = 0; i < tabNames.Length; i++) ((System.Windows.Controls.TabItem)_tabs.Items[i]).Header = tabNames[i];
         FrameworkElement[] pages = [_statusTab, _profilesTab, _programsTab, _updatesTab, _controlTab];
         for (var i = 0; i < pages.Length; i++) ((System.Windows.Controls.TabItem)_tabs.Items[i]).Tag = pages[i];
@@ -130,7 +130,7 @@ public partial class ModesPage : UiPage
             _bindFailed = true;
             _host = null;
             Log.Error("page bind", e);
-            _waiting.Text = Tr.F("Не удалось открыть страницу: {0}", e.Message);
+            _waiting.Text = Tr.F("Could not open the page: {0}", e.Message);
         }
         finally { _binding = false; }
     }
@@ -181,13 +181,13 @@ public partial class ModesPage : UiPage
         if (d is null)
         {
             _inForceName.Text = "—";
-            _inForceReason.Text = Tr.T("профиль ещё не выбран");
+            _inForceReason.Text = Tr.T("no profile selected yet");
             return;
         }
         var index = _host.Config.IndexOf(d.Profile);
         _inForceName.Text = (index >= 0 ? $"{index} · " : "") + ProfileNames.Display(d.Profile);
-        _inForceReason.Text = d.Paused ? Tr.F("{0} · пауза, параметры не применяются", d.Reason)
-            : !_host.HasControl ? Tr.F("{0} · управление у LLT, параметры не применяются", d.Reason)
+        _inForceReason.Text = d.Paused ? Tr.F("{0} · paused, parameters are not applied", d.Reason)
+            : !_host.HasControl ? Tr.F("{0} · LLT has control, parameters are not applied", d.Reason)
             : d.Reason;
         _inForceIcon.Symbol = d.Paused || !_host.HasControl ? Wpf.Ui.Common.SymbolRegular.PauseCircle24 : Wpf.Ui.Common.SymbolRegular.CheckmarkCircle24;
         _inForceIcon.SetResourceReference(ForegroundProperty, d.Paused || !_host.HasControl ? "PaletteOrangeBrush" : "PaletteGreenBrush");

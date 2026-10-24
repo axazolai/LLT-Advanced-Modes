@@ -8,59 +8,59 @@ public static class ModesValidator
     public static IReadOnlyList<string> Errors(ModesConfig c, int maxBrightness)
     {
         if (c.SchemaVersion != ModesConfig.CurrentSchema)
-            return [Tr.F("версия схемы {0} не поддерживается (нужна {1})", c.SchemaVersion, ModesConfig.CurrentSchema)];
-        if (c.Profiles is null || c.Profiles.Count == 0) return [Tr.T("нет ни одного профиля")];
+            return [Tr.F("schema version {0} is not supported ({1} required)", c.SchemaVersion, ModesConfig.CurrentSchema)];
+        if (c.Profiles is null || c.Profiles.Count == 0) return [Tr.T("there are no profiles")];
 
         var errors = new List<string>();
-        if (c.PauseMinutes is < 1 or > 1440) errors.Add(Tr.F("длительность паузы {0} мин вне 1..1440", c.PauseMinutes));
+        if (c.PauseMinutes is < 1 or > 1440) errors.Add(Tr.F("pause length {0} min is outside 1..1440", c.PauseMinutes));
 
         foreach (var g in c.Profiles.Where(p => !string.IsNullOrWhiteSpace(p.Name)).GroupBy(p => p.Name).Where(g => g.Count() > 1))
-            errors.Add(Tr.F("два профиля с названием «{0}»", Tr.T(g.Key)));
+            errors.Add(Tr.F("two profiles named \"{0}\"", ProfileNames.DisplayName(g.Key)));
         foreach (var g in c.Profiles.GroupBy(p => p.Id).Where(g => g.Count() > 1))
-            errors.Add(Tr.F("повторяется id профиля {0} («{1}»)", g.Key, string.Join("», «", g.Select(p => ProfileNames.Display(p)))));
+            errors.Add(Tr.F("profile id {0} is repeated (\"{1}\")", g.Key, string.Join("», «", g.Select(p => ProfileNames.Display(p)))));
         foreach (var g in c.Profiles.SelectMany(p => p.Pipelines ?? []).GroupBy(p => p.Id).Where(g => g.Count() > 1))
-            errors.Add(Tr.F("повторяется id действия {0}", g.Key));
+            errors.Add(Tr.F("action id {0} is repeated", g.Key));
 
         var roots = c.Profiles.Count(p => p.Kind == ProfileKind.Root);
-        if (roots != 1) errors.Add(Tr.F("профиль «{0}» должен быть ровно один, найдено {1}", ProfileNames.DisplayName(ProfileNames.Root), roots));
+        if (roots != 1) errors.Add(Tr.F("there must be exactly one profile \"{0}\", found {1}", ProfileNames.DisplayName(ProfileNames.Root), roots));
         var manuals = c.Profiles.Count(p => p.Kind == ProfileKind.Manual);
-        if (manuals != 1) errors.Add(Tr.F("профиль «{0}» должен быть ровно один, найдено {1}", ProfileNames.DisplayName(ProfileNames.Autonomy), manuals));
+        if (manuals != 1) errors.Add(Tr.F("there must be exactly one profile \"{0}\", found {1}", ProfileNames.DisplayName(ProfileNames.Autonomy), manuals));
 
         for (var i = 0; i < c.Profiles.Count; i++)
         {
             var p = c.Profiles[i];
             var who = $"«{ProfileNames.Display(p)}»";
-            if (string.IsNullOrWhiteSpace(p.Name)) errors.Add(Tr.F("профиль №{0}: пустое название", i));
-            if (p.Conditions is null || p.Set is null) { errors.Add(who + ": " + Tr.T("нет условий или параметров")); continue; }
+            if (string.IsNullOrWhiteSpace(p.Name)) errors.Add(Tr.F("profile #{0}: empty name", i));
+            if (p.Conditions is null || p.Set is null) { errors.Add(who + ": " + Tr.T("no conditions or parameters")); continue; }
 
-            if (p.DelaySec is < 0 or > 3600) errors.Add(who + ": " + Tr.F("задержка {0} с вне 0..3600", p.DelaySec));
-            if (p.HoldSec is < 0 or > 3600) errors.Add(who + ": " + Tr.F("удержание {0} с вне 0..3600", p.HoldSec));
+            if (p.DelaySec is < 0 or > 3600) errors.Add(who + ": " + Tr.F("delay {0} s is outside 0..3600", p.DelaySec));
+            if (p.HoldSec is < 0 or > 3600) errors.Add(who + ": " + Tr.F("hold {0} s is outside 0..3600", p.HoldSec));
 
             switch (p.Kind)
             {
                 case ProfileKind.Root:
-                    if (i != 0) errors.Add(who + ": " + Tr.F("корневой профиль должен стоять первым (сейчас на месте {0})", i));
-                    if (p.Conditions.Specificity != 0) errors.Add(who + ": " + Tr.T("у корневого профиля не может быть условий"));
-                    if (p.DelaySec != 0 || p.HoldSec != 0) errors.Add(who + ": " + Tr.T("у корневого профиля задержка и удержание должны быть 0"));
+                    if (i != 0) errors.Add(who + ": " + Tr.F("the root profile must be first (now at position {0})", i));
+                    if (p.Conditions.Specificity != 0) errors.Add(who + ": " + Tr.T("the root profile cannot have conditions"));
+                    if (p.DelaySec != 0 || p.HoldSec != 0) errors.Add(who + ": " + Tr.T("the root profile must have delay and hold of 0"));
                     foreach (var id in Enum.GetValues<ParameterId>())
-                        if (!p.Set.IsSet(id)) errors.Add(who + ": " + Tr.F("корневой профиль должен задавать параметр «{0}»", ParameterName(id)));
+                        if (!p.Set.IsSet(id)) errors.Add(who + ": " + Tr.F("the root profile must set the parameter \"{0}\"", ParameterName(id)));
                     break;
                 case ProfileKind.Manual:
-                    if (p.Name != ProfileNames.Autonomy) errors.Add(who + ": " + Tr.F("ручной профиль должен называться «{0}»", ProfileNames.DisplayName(ProfileNames.Autonomy)));
-                    if (p.Conditions.Specificity != 0) errors.Add(who + ": " + Tr.T("у ручного профиля не может быть условий"));
-                    if (p.DelaySec != 0 || p.HoldSec != 0) errors.Add(who + ": " + Tr.T("у ручного профиля задержка и удержание должны быть 0"));
+                    if (p.Name != ProfileNames.Autonomy) errors.Add(who + ": " + Tr.F("the manual profile must be named \"{0}\"", ProfileNames.DisplayName(ProfileNames.Autonomy)));
+                    if (p.Conditions.Specificity != 0) errors.Add(who + ": " + Tr.T("the manual profile cannot have conditions"));
+                    if (p.DelaySec != 0 || p.HoldSec != 0) errors.Add(who + ": " + Tr.T("the manual profile must have delay and hold of 0"));
                     break;
                 case ProfileKind.Automatic:
-                    if (i == 0) errors.Add(who + ": " + Tr.F("первым должен стоять «{0}»", ProfileNames.DisplayName(ProfileNames.Root)));
-                    if (p.Conditions.Specificity == 0) errors.Add(who + ": " + Tr.T("нужно хотя бы одно условие"));
+                    if (i == 0) errors.Add(who + ": " + Tr.F("\"{0}\" must be first", ProfileNames.DisplayName(ProfileNames.Root)));
+                    if (p.Conditions.Specificity == 0) errors.Add(who + ": " + Tr.T("at least one condition is required"));
                     else
                     {
                         var twin = c.Profiles.Take(i).FirstOrDefault(o => o.Kind == ProfileKind.Automatic && o.Conditions == p.Conditions);
-                        if (twin is not null) errors.Add(who + ": " + Tr.F("такие же условия у профиля «{0}»", ProfileNames.Display(twin)));
+                        if (twin is not null) errors.Add(who + ": " + Tr.F("profile \"{0}\" has the same conditions", ProfileNames.Display(twin)));
                     }
                     break;
                 default:
-                    errors.Add(who + ": " + Tr.F("неизвестный вид профиля {0}", p.Kind));
+                    errors.Add(who + ": " + Tr.F("unknown profile kind {0}", p.Kind));
                     break;
             }
             ParameterErrors(who, p, maxBrightness, errors);
@@ -71,15 +71,15 @@ public static class ModesValidator
     // The parameter names of the profile editor.
     public static string ParameterName(ParameterId id) => id switch
     {
-        ParameterId.Power => Tr.T("Мощность и вентиляторы"),
-        ParameterId.Gpu => Tr.T("Режим видеокарты"),
-        ParameterId.Panel => Tr.T("Частота встроенного экрана"),
-        ParameterId.External => Tr.T("Внешний монитор"),
-        ParameterId.Charging => Tr.T("Зарядка"),
-        ParameterId.Usb => Tr.T("USB во сне"),
-        ParameterId.Processor => Tr.T("Процессор и схема Windows"),
-        ParameterId.Timers => Tr.T("Таймеры простоя"),
-        _ => Tr.T("Подсветка"),
+        ParameterId.Power => Tr.T("Power and fans"),
+        ParameterId.Gpu => Tr.T("GPU mode"),
+        ParameterId.Panel => Tr.T("Built-in display refresh rate"),
+        ParameterId.External => Tr.T("External monitor"),
+        ParameterId.Charging => Tr.T("Charging"),
+        ParameterId.Usb => Tr.T("USB in sleep"),
+        ParameterId.Processor => Tr.T("Processor and Windows plan"),
+        ParameterId.Timers => Tr.T("Idle timers"),
+        _ => Tr.T("Lighting"),
     };
 
     static void ParameterErrors(string who, Profile p, int maxBrightness, List<string> errors)
@@ -88,16 +88,16 @@ public static class ModesValidator
         if (s.Panel is { } panel)
         {
             if (panel.Kind == PanelRateKind.Fixed && !FirmwareRanges.PanelHz.Contains(panel.Hz))
-                errors.Add(who + ": " + Tr.F("частота экрана {0} Гц не из {1}", panel.Hz, string.Join(", ", FirmwareRanges.PanelHz)));
+                errors.Add(who + ": " + Tr.F("display frequency {0} Hz is not one of {1}", panel.Hz, string.Join(", ", FirmwareRanges.PanelHz)));
             if (panel.Kind == PanelRateKind.Drr && panel.Hz is not (0 or 120))
-                errors.Add(who + ": " + Tr.F("DRR работает только на 120 Гц, задано {0}", panel.Hz));
+                errors.Add(who + ": " + Tr.F("DRR works only at 120 Hz, set {0}", panel.Hz));
         }
         if (s.Processor is { Epp: { } epp } && (epp < FirmwareRanges.Epp.Min || epp > FirmwareRanges.Epp.Max))
-            errors.Add(who + ": " + Tr.F("EPP {0} вне {1}..{2}", epp, FirmwareRanges.Epp.Min, FirmwareRanges.Epp.Max));
+            errors.Add(who + ": " + Tr.F("EPP {0} is outside {1}..{2}", epp, FirmwareRanges.Epp.Min, FirmwareRanges.Epp.Max));
         if (s.Lighting is { } l)
         {
-            if (l.Profile is < 1 or > 6) errors.Add(who + ": " + Tr.F("профиль подсветки {0} вне 1..6", l.Profile));
-            if (l.Brightness is < 0 or > 9) errors.Add(who + ": " + Tr.F("яркость подсветки {0} вне 0..9", l.Brightness));
+            if (l.Profile is < 1 or > 6) errors.Add(who + ": " + Tr.F("backlight profile {0} is outside 1..6", l.Profile));
+            if (l.Brightness is < 0 or > 9) errors.Add(who + ": " + Tr.F("backlight brightness {0} is outside 0..9", l.Brightness));
         }
         if (s.Timers is { } t) TimerErrors(who, p, t, maxBrightness, errors);
     }
@@ -106,31 +106,31 @@ public static class ModesValidator
     {
         void Minutes(string field, int v)
         {
-            if (v is < 0 or > 1440) errors.Add(who + ": " + Tr.F("{0} {1} мин вне 0..1440", field, v));
+            if (v is < 0 or > 1440) errors.Add(who + ": " + Tr.F("{0} {1} min is outside 0..1440", field, v));
         }
-        Minutes(Tr.T("выключение экрана"), t.DisplayOffMin);
-        Minutes(Tr.T("сон"), t.SleepMin);
-        Minutes(Tr.T("гибернация"), t.HibernateMin);
+        Minutes(Tr.T("display off"), t.DisplayOffMin);
+        Minutes(Tr.T("sleep"), t.SleepMin);
+        Minutes(Tr.T("hibernation"), t.HibernateMin);
         if (t.Dim is { } dim)
         {
-            Minutes(Tr.T("затемнение"), dim.Minutes);
+            Minutes(Tr.T("dimming"), dim.Minutes);
             if (dim.Brightness < 0 || dim.Brightness > maxBrightness)
-                errors.Add(who + ": " + Tr.F("яркость затемнения {0} вне 0..{1}", dim.Brightness, maxBrightness));
+                errors.Add(who + ": " + Tr.F("dimming brightness {0} is outside 0..{1}", dim.Brightness, maxBrightness));
         }
         if (t.ForcedSleepMin is { } forced)
         {
-            if (forced < 1 || forced > 1440) errors.Add(who + ": " + Tr.F("сон с закрытой крышкой {0} мин вне 1..1440", forced));
+            if (forced < 1 || forced > 1440) errors.Add(who + ": " + Tr.F("sleep with the lid closed {0} min is outside 1..1440", forced));
             if (p.Conditions.Lid != LidState.Closed)
-                errors.Add(who + ": " + Tr.T("сон с закрытой крышкой задаётся только в профиле с условием «закрыт»"));
+                errors.Add(who + ": " + Tr.T("sleep with the lid closed is set only in a profile with the condition \"closed\""));
         }
 
         // The stages that are not "never" rise strictly: dim < display off < sleep.
         var stages = new List<(string Name, int Min)>();
-        if (t.Dim is { Minutes: > 0 } d) stages.Add((Tr.T("затемнение"), d.Minutes));
-        if (t.DisplayOffMin > 0) stages.Add((Tr.T("выключение экрана"), t.DisplayOffMin));
-        if (t.SleepMin > 0) stages.Add((Tr.T("сон"), t.SleepMin));
+        if (t.Dim is { Minutes: > 0 } d) stages.Add((Tr.T("dimming"), d.Minutes));
+        if (t.DisplayOffMin > 0) stages.Add((Tr.T("display off"), t.DisplayOffMin));
+        if (t.SleepMin > 0) stages.Add((Tr.T("sleep"), t.SleepMin));
         for (var i = 1; i < stages.Count; i++)
             if (stages[i].Min <= stages[i - 1].Min)
-                errors.Add(who + ": " + Tr.F("{0} ({1} мин) должно наступать раньше, чем {2} ({3} мин)", stages[i - 1].Name, stages[i - 1].Min, stages[i].Name, stages[i].Min));
+                errors.Add(who + ": " + Tr.F("{0} ({1} min) must come before {2} ({3} min)", stages[i - 1].Name, stages[i - 1].Min, stages[i].Name, stages[i].Min));
     }
 }

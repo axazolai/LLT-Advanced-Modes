@@ -4,6 +4,6 @@
     <AssemblyName>LegionModes.Core</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Threading.AccessControl" Version="9.0.0" />
+    <PackageReference Include="System.Threading.AccessControl" Version="10.0.3" />
   </ItemGroup>
 </Project>

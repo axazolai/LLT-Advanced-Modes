@@ -12,15 +12,15 @@ public static class KeySettings
     {
         var list = new List<KeySetting>
         {
-            new("update_settings.json", "$.UpdateCheckFrequency", (_, r) => IsString(r, "Never"), Tr.T("UpdateCheckFrequency должен быть Never (проверка обновлений LLT выключена)")),
-            new("integrations.json", "$.CLI", (_, r) => IsBool(r, true), Tr.T("CLI должен быть включён (true)")),
+            new("update_settings.json", "$.UpdateCheckFrequency", (_, r) => IsString(r, "Never"), Tr.T("UpdateCheckFrequency must be Never (LLT update check is off)")),
+            new("integrations.json", "$.CLI", (_, r) => IsBool(r, true), Tr.T("CLI must be enabled (true)")),
         };
         if (hasControl)
         {
-            list.Add(new("automation.json", "$.IsEnabled", (_, r) => IsBool(r, false), Tr.T("автоматизация LLT должна быть выключена (IsEnabled = false)")));
-            list.Add(new("settings.json", "$.PowerModeMappingMode", (_, r) => IsString(r, "Disabled"), Tr.T("PowerModeMappingMode должен быть Disabled")));
+            list.Add(new("automation.json", "$.IsEnabled", (_, r) => IsBool(r, false), Tr.T("LLT automation must be off (IsEnabled = false)")));
+            list.Add(new("settings.json", "$.PowerModeMappingMode", (_, r) => IsString(r, "Disabled"), Tr.T("PowerModeMappingMode must be Disabled")));
         }
-        list.Add(new("godmode.json", "$.Presets", PresetsHold, Tr.F("каждый пресет «{0}» должен сохранить все поля из копии, которые есть в новой версии LLT, с прежними значениями", Paths.PresetPrefix)));
+        list.Add(new("godmode.json", "$.Presets", PresetsHold, Tr.F("every \"{0}\" preset must keep all fields from the backup that exist in the new LLT version, with the same values", Paths.PresetPrefix)));
         return list;
     }
 

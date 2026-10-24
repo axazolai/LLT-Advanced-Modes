@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using LegionModes.Core;
 using LegionModes.Core.Model;
 using LegionModes.Plugin.Ui.ViewModels;
@@ -15,7 +16,12 @@ namespace LegionModes.Plugin.Ui;
 // holds the laptop awake, the plugin's own health. Cards in two columns, each rebuilt when its view-model data changes.
 public partial class StatusTab : UserControl
 {
-    readonly ContentControl _profile = new(), _devices = new(), _wake = new(), _parameters = new(), _plugin = new();
+    readonly ContentControl _profile = new(), _devices = new(), _wake = new(), _compute = new(), _screens = new(), _rest = new(), _plugin = new();
+    bool _wide;
+
+    // Three columns when the window holds three columns of the width the cards have in two (the owner's screenshot: about 590 screen pixels), else
+    // the last card goes under the others. Screen pixels, not device-independent units: the owner judges by his screen.
+    const double ColumnMinPixels = 590;
     StatusViewModel? _vm;
 
     public event Action? EffectiveActionsRequested;
@@ -28,13 +34,29 @@ public partial class StatusTab : UserControl
         _left.Children.Add(_devices);
         _left.Children.Add(_wake);
         _left.Children.Add(_plugin);
-        _right.Children.Add(_parameters);
+        Arrange(false);
+        SizeChanged += (_, e) => Arrange(e.NewSize.Width * VisualTreeHelper.GetDpi(this).DpiScaleX >= 3 * ColumnMinPixels + 60);
+        IsVisibleChanged += (_, e) => _vm?.Shown((bool)e.NewValue);
+    }
+
+    void Arrange(bool wide)
+    {
+        if (wide == _wide && _right.Children.Count > 0) return;
+        _wide = wide;
+        _right.Children.Clear();
+        _third.Children.Clear();
+        _right.Children.Add(_compute);
+        _right.Children.Add(_screens);
+        (wide ? _third : _right).Children.Add(_rest);
+        _gap2.Width = new GridLength(wide ? 5 : 0);
+        _col3.Width = wide ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
     }
 
     public void Bind(StatusViewModel vm)
     {
         _vm = vm;
         vm.PropertyChanged += OnChanged;
+        if (IsVisible) vm.Shown(true);
         foreach (var part in Enum.GetValues<Part>()) Render(part);
     }
 
@@ -73,16 +95,16 @@ public partial class StatusTab : UserControl
                 _profile.Content = ProfileCard(vm);
                 break;
             case Part.Devices:
-                _devices.Content = Card(SymbolRegular.Mic24, "PaletteGreenBrush", Tr.T("Микрофон и камера"), Rows(vm.DeviceRows));
+                _devices.Content = Card(SymbolRegular.Mic24, "PaletteGreenBrush", Tr.T("Microphone and camera"), Rows(vm.DeviceRows));
                 break;
             case Part.Wake:
                 _wake.Content = WakeCard(vm);
                 break;
             case Part.Parameters:
-                _parameters.Content = ParametersCard(vm);
+                (_compute.Content, _screens.Content, _rest.Content) = ParameterCards(vm);
                 break;
             case Part.Plugin:
-                _plugin.Content = Card(SymbolRegular.ShieldCheckmark24, "PaletteLightBlueBrush", Tr.T("Плагин"), Rows(vm.PluginRows));
+                _plugin.Content = Card(SymbolRegular.ShieldCheckmark24, "PaletteLightBlueBrush", Tr.T("Plugin"), Rows(vm.PluginRows));
                 break;
         }
     }
@@ -93,21 +115,31 @@ public partial class StatusTab : UserControl
         body.Children.Add(Text(vm.InForceName, "MainValue"));
         body.Children.Add(Toned(vm.InForceReason, "SubLine", vm.InForceTone, new Thickness(0, 2, 0, 12)));
         body.Children.Add(Rows(vm.ProfileRows));
-        var button = new Wpf.Ui.Controls.Button { Content = Tr.T("Итоговые действия"), Icon = SymbolRegular.Flowchart24, IsEnabled = vm.Decision is not null };
+        var button = new Wpf.Ui.Controls.Button { Content = Tr.T("Effective actions"), Icon = SymbolRegular.Flowchart24, IsEnabled = vm.Decision is not null };
         button.Click += (_, _) =>
         {
             try { EffectiveActionsRequested?.Invoke(); }
             catch (Exception e) { Log.Error("effective actions", e); }
         };
-        return Card(SymbolRegular.Layer24, "PaletteLightBlueBrush", Tr.T("Сейчас действует"), body, button);
+        return Card(SymbolRegular.Layer24, "PaletteLightBlueBrush", Tr.T("In force now|2"), body, button);
     }
 
-    static UIElement ParametersCard(StatusViewModel vm)
+    // The parameters in three cards (owner 2026-10-24, the numbers of his screenshot): the compute pair (GPU mode, processor), the screens
+    // (panel, external monitor), and the rest.
+    static readonly ParameterId[] Compute = [ParameterId.Gpu, ParameterId.Processor];
+    static readonly ParameterId[] Screens = [ParameterId.Panel, ParameterId.External];
+
+    static (UIElement? Compute, UIElement? Screens, UIElement Others) ParameterCards(StatusViewModel vm)
     {
-        var body = new StackPanel();
-        if (vm.Parameters.Count == 0) body.Children.Add(Text(Tr.T("профиль ещё не выбран"), "SubLine"));
-        foreach (var p in vm.Parameters) body.Children.Add(ParameterItem(p));
-        return Card(SymbolRegular.Options24, "PaletteBlueBrush", Tr.T("Параметры"), body);
+        var compute = new StackPanel();
+        var screens = new StackPanel();
+        var rest = new StackPanel();
+        if (vm.Parameters.Count == 0) rest.Children.Add(Text(Tr.T("no profile selected yet"), "SubLine"));
+        foreach (var p in vm.Parameters)
+            (Compute.Contains(p.Id) ? compute : Screens.Contains(p.Id) ? screens : rest).Children.Add(ParameterItem(p));
+        return (compute.Children.Count > 0 ? Card(SymbolRegular.DeveloperBoard24, "PaletteLightBlueBrush", Tr.T("Processor and graphics"), compute) : null,
+                screens.Children.Count > 0 ? Card(SymbolRegular.Desktop24, "PalettePurpleBrush", Tr.T("Screens"), screens) : null,
+                Card(SymbolRegular.Options24, "PaletteBlueBrush", Tr.T("Parameters"), rest));
     }
 
     // Name and, when it is not a plain success, the result on one line; the value under it, then where it comes from (and the result's text).
@@ -127,6 +159,8 @@ public partial class StatusTab : UserControl
         var lines = new StackPanel();
         lines.Children.Add(Text(p.Value, "SubLine", new Thickness(0, 2, 0, 0)));
         lines.Children.Add(Text(p.Source, "SubLine"));
+        if (p.Facts is { } facts)
+            foreach (var f in facts) lines.Children.Add(Toned(f.Label + ": " + f.Value, "SubLine", f.Tone, null));
         if (p.Detail is { } d) lines.Children.Add(Toned(d, "SubLine", p.Tone, null));
         Place(grid, lines, 1, 1);
         Grid.SetColumnSpan(lines, 2);
@@ -144,7 +178,7 @@ public partial class StatusTab : UserControl
             item.Children.Add(Text(w.What, "SubLine", new Thickness(0, 2, 0, 0)));
             body.Children.Add(item);
         }
-        return Card(SymbolRegular.WeatherMoon24, "PalettePurpleBrush", Tr.T("Кто не даёт спать"), body);
+        return Card(SymbolRegular.WeatherMoon24, "PalettePurpleBrush", Tr.T("What keeps it awake"), body);
     }
 
     static void Place(Grid grid, UIElement e, int row, int column)
@@ -186,26 +220,26 @@ public partial class StatusTab : UserControl
     {
         (string Ru, SymbolRegular Icon)[] icons =
         {
-            ("Условия", SymbolRegular.Filter24),
-            ("Управление", SymbolRegular.Settings24),
-            ("Ждёт", SymbolRegular.Clock24),
-            ("Включено", SymbolRegular.Flash24),
-            ("Правило", SymbolRegular.Info24),
-            ("Сон с закрытой крышкой", SymbolRegular.WeatherMoon24),
-            ("Последнее применение", SymbolRegular.ArrowSync24),
-            ("Сообщение", SymbolRegular.Warning24),
-            ("Самопроверка", SymbolRegular.ShieldCheckmark24),
-            ("Действия LLT", SymbolRegular.Flowchart24),
-            ("Оборудование", SymbolRegular.DeveloperBoard24),
-            ("Трей и главная", SymbolRegular.Window24),
-            ("Тексты LLT", SymbolRegular.Translate24),
-            ("Микрофон", SymbolRegular.Mic24),
-            ("Камера", SymbolRegular.Camera24),
-            ("Переключатель", SymbolRegular.ToggleLeft24),
-            ("Используют", SymbolRegular.Apps24),
-            ("Последний релиз", SymbolRegular.ArrowDownload24),
-            ("Последняя проверка", SymbolRegular.Clock24),
-            ("Совместимость", SymbolRegular.ShieldCheckmark24),
+            ("Conditions", SymbolRegular.Filter24),
+            ("Control", SymbolRegular.Settings24),
+            ("Waiting", SymbolRegular.Clock24),
+            ("On", SymbolRegular.Flash24),
+            ("Rule", SymbolRegular.Info24),
+            ("Sleep with lid closed", SymbolRegular.WeatherMoon24),
+            ("Last apply", SymbolRegular.ArrowSync24),
+            ("Message", SymbolRegular.Warning24),
+            ("Self-test", SymbolRegular.ShieldCheckmark24),
+            ("LLT actions", SymbolRegular.Flowchart24),
+            ("Hardware", SymbolRegular.DeveloperBoard24),
+            ("Tray and home", SymbolRegular.Window24),
+            ("LLT texts", SymbolRegular.Translate24),
+            ("Microphone", SymbolRegular.Mic24),
+            ("Camera", SymbolRegular.Camera24),
+            ("Switch", SymbolRegular.ToggleLeft24),
+            ("Used by", SymbolRegular.Apps24),
+            ("Latest release", SymbolRegular.ArrowDownload24),
+            ("Last check", SymbolRegular.Clock24),
+            ("Compatibility", SymbolRegular.ShieldCheckmark24),
         };
         foreach (var (ru, icon) in icons)
             if (label == ru || label == Tr.T(ru)) return icon;

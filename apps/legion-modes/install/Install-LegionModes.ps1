@@ -24,6 +24,10 @@ $KeeperExe    = Join-Path $InstallDir 'LegionModes.Keeper.exe'
 $QuickExe     = Join-Path $InstallDir 'LegionModes.Quick.exe'
 $GuardExe     = Join-Path $InstallDir 'LegionModes.Guard.exe'
 $KeeperTask   = 'LegionModes Keeper'
+# The elevated keeper starts through cmd with the .NET host variables cleared: a non-elevated process can set them in HKCU\Environment
+# and make the keeper load foreign code (R-1607). cmd.exe is not a .NET program.
+$KeeperCmd    = 'cmd.exe'
+$KeeperCmdArg = '/d /s /c "set DOTNET_ROOT=& set DOTNET_ROOT_X64=& set DOTNET_ROOT(x86)=& set DOTNET_ADDITIONAL_DEPS=& set DOTNET_SHARED_STORE=& set DOTNET_STARTUP_HOOKS=& set COREHOST_TRACE=& "' + $KeeperExe + '""'
 $GuardService = 'LegionModesGuard'
 $EventSource  = 'LegionModes'
 $PluginPipe   = 'LegionModes.Plugin'
@@ -35,7 +39,7 @@ function Write-Log([string]$text) {
     $line = '{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $text
     Write-Host $line
     try {
-        if (-not (Test-Path -LiteralPath $DataRoot)) { New-Item -ItemType Directory -Force $DataRoot | Out-Null }
+        Initialize-DataRoot
         Add-Content -LiteralPath $LogFile -Value $line -Encoding utf8
     } catch { Write-Host "log write failed: $($_.Exception.Message)" }
 }
@@ -174,6 +178,25 @@ function Get-DataRootAcl {
         $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($sid, $e[1], $inherit, $none, $allow)))
     }
     return $acl
+}
+
+# The data root is secured before anything is written into it: the keeper runs installers kept there. A folder somebody else
+# created first (a different owner keeps the right to rewrite its DACL) is refused.
+$script:DataRootReady = $false
+function Initialize-DataRoot {
+    if ($script:DataRootReady) { return }
+    if (-not (Test-Path -LiteralPath $DataRoot)) { New-Item -ItemType Directory -Force $DataRoot | Out-Null }
+    $trusted = @('S-1-5-18', 'S-1-5-32-544')
+    $owner = (Get-Acl -LiteralPath $DataRoot).GetOwner([Security.Principal.SecurityIdentifier]).Value
+    if ($owner -notin $trusted) {
+        $acl = Get-DataRootAcl
+        $acl.SetOwner((New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))
+        try { Set-Acl -LiteralPath $DataRoot -AclObject $acl } catch { }
+        $owner = (Get-Acl -LiteralPath $DataRoot).GetOwner([Security.Principal.SecurityIdentifier]).Value
+        if ($owner -notin $trusted) { throw "the data root $DataRoot is owned by $owner, not by SYSTEM or Administrators; remove the folder and run the installer again" }
+    }
+    Set-Acl -LiteralPath $DataRoot -AclObject (Get-DataRootAcl)
+    $script:DataRootReady = $true
 }
 
 function Get-AclKey($acl) {
@@ -358,7 +381,7 @@ Invoke-Step '3 plugin' {
 
 # Step 3b: data root, its DACL, innounp.
 Invoke-Step '3b data root' {
-    New-Item -ItemType Directory -Force $DataRoot | Out-Null
+    Initialize-DataRoot
     $want = Get-DataRootAcl
     $have = Get-Acl -LiteralPath $DataRoot
     if ((Get-AclKey $want) -eq (Get-AclKey $have)) { $r = "skipped (DACL of $DataRoot in place)" }
@@ -397,17 +420,26 @@ Invoke-Step '5 keeper, guard, quick' {
     "done ($n file(s) copied, $($installExtra.Count) removed in $InstallDir)"
 }
 
+# Step 5b: the install folder on the machine PATH, so the keeper is always started from the one path its tray icons are tied to.
+Invoke-Step '5b machine path' {
+    $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $entries = @($machine -split ';' | Where-Object { $_ })
+    if ($entries | Where-Object { $_.TrimEnd('\') -ieq $InstallDir }) { return "skipped ($InstallDir is on the machine PATH)" }
+    [Environment]::SetEnvironmentVariable('Path', (($entries + $InstallDir) -join ';'), 'Machine')
+    "done ($InstallDir added to the machine PATH)"
+}
+
 # Step 6: keeper task.
 Invoke-Step '6 keeper task' {
     $t = Get-ScheduledTask -TaskName $KeeperTask -ErrorAction SilentlyContinue
     if ($t) {
         $a = @($t.Actions)[0]; $trg = @($t.Triggers)[0]
-        $same = ($a.Execute -eq $KeeperExe) -and ((Get-Sid $t.Principal.UserId) -eq (Get-Sid $user)) -and ($t.Principal.RunLevel -eq 'Highest') -and
+        $same = ($a.Execute -eq $KeeperCmd) -and ($a.Arguments -eq $KeeperCmdArg) -and ((Get-Sid $t.Principal.UserId) -eq (Get-Sid $user)) -and ($t.Principal.RunLevel -eq 'Highest') -and
                 ($trg -and $trg.CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger' -and (Get-Sid $trg.UserId) -eq (Get-Sid $user)) -and
                 ($t.Settings.RestartCount -eq 3) -and ($t.Settings.RestartInterval -eq 'PT1M') -and ($t.Settings.ExecutionTimeLimit -eq 'PT0S')
         if ($same) { return 'skipped (task in place)' }
     }
-    $action    = New-ScheduledTaskAction -Execute $KeeperExe -WorkingDirectory $InstallDir
+    $action    = New-ScheduledTaskAction -Execute $KeeperCmd -Argument $KeeperCmdArg -WorkingDirectory $InstallDir
     $trigger   = New-ScheduledTaskTrigger -AtLogOn -User $user
     $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Highest
     $settings  = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) `

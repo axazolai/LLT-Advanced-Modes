@@ -80,7 +80,7 @@ internal static class Displays
                     return ParameterResult.Of(await VerifyPanelAsync(new PanelExpectation(drr.Frequency, drr.BaseFrequency, true)).ConfigureAwait(false));
                 }
                 var fixedResult = await ApplyPanelRateAsync(DrrPhysicalHz).ConfigureAwait(false);
-                var fallback = Tr.F("DRR недоступен (состояния панели: {0}), стоит 120 Гц", string.Join(", ", states.Select(x => x.IsDynamic ? $"{x.Frequency} dyn/{x.BaseFrequency}" : x.Frequency.ToString())));
+                var fallback = Tr.F("DRR is unavailable (panel states: {0}), set to 120 Hz", string.Join(", ", states.Select(x => x.IsDynamic ? $"{x.Frequency} dyn/{x.BaseFrequency}" : x.Frequency.ToString())));
                 return fixedResult is null ? ParameterResult.Note(fallback) : ParameterResult.Of(fallback + "; " + fixedResult);
             default:
                 Log.Trace("panel rate skipped: do not touch");
@@ -97,7 +97,7 @@ internal static class Displays
             await Task.Delay(delayMs).ConfigureAwait(false);
             PanelReading? got;
             try { got = await ReadPanelAsync().ConfigureAwait(false); }
-            catch (Exception e) { Log.Error("panel read-back", e); return Tr.F("панель не прочитана: {0}", e.Message); }
+            catch (Exception e) { Log.Error("panel read-back", e); return Tr.F("panel not read: {0}", e.Message); }
             if (got is not { } g) return null;   // no internal display: nothing to compare
             last = Compare(want, g);
             if (last is null) return null;
@@ -109,11 +109,15 @@ internal static class Displays
     internal static string? Compare(PanelExpectation want, PanelReading got)
     {
         var problems = new List<string>();
-        if (Math.Abs(got.PhysicalHz - want.PhysicalHz) > 1) problems.Add(Tr.F("сигнал {0} Гц, ожидался {1} Гц", got.PhysicalHz, want.PhysicalHz));
-        if (got.Drr != want.Drr) problems.Add(Tr.F("DRR {0}, ожидался {1}", got.Drr ? Tr.T("включён") : Tr.T("выключен"), want.Drr ? Tr.T("включён") : Tr.T("выключен")));
-        if (Math.Abs(got.VirtualHz - want.VirtualHz) > 1) problems.Add(Tr.F("частота в системе {0} Гц, ожидалась {1} Гц", got.VirtualHz, want.VirtualHz));
-        return problems.Count == 0 ? null : Tr.F("панель: {0}", string.Join("; ", problems));
+        if (Math.Abs(got.PhysicalHz - want.PhysicalHz) > 1) problems.Add(Tr.F("signal {0} Hz, expected {1} Hz", got.PhysicalHz, want.PhysicalHz));
+        if (got.Drr != want.Drr) problems.Add(Tr.F("DRR {0}, expected {1}", got.Drr ? Tr.T("on|2") : Tr.T("off"), want.Drr ? Tr.T("on|2") : Tr.T("off")));
+        if (Math.Abs(got.VirtualHz - want.VirtualHz) > 1) problems.Add(Tr.F("frequency in the system {0} Hz, expected {1} Hz", got.VirtualHz, want.VirtualHz));
+        return problems.Count == 0 ? null : Tr.F("panel: {0}", string.Join("; ", problems));
     }
+
+    // The same reading for the Status tab.
+    internal static async Task<Status.PanelFact?> ReadPanelFactAsync() =>
+        await ReadPanelAsync().ConfigureAwait(false) is { } r ? new Status.PanelFact(r.PhysicalHz, r.VirtualHz, r.Drr) : null;
 
     // Signal frequency (VerticalSyncFrequencyInMillihertz), the boost (DRR) flag and the virtual rate of the internal target.
     static async Task<PanelReading?> ReadPanelAsync()

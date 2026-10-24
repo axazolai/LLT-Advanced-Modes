@@ -5,6 +5,8 @@
     <AssemblyName>LegionModes.Guard</AssemblyName>
     <StartupHookSupport>false</StartupHookSupport>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Diagnostics.EventLog" Version="9.0.0" />

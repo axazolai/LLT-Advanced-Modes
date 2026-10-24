@@ -31,8 +31,8 @@ public sealed class ProfileEditorWindow : BaseWindow
     readonly Wpf.Ui.Controls.DynamicScrollViewer _scroll = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     readonly TextBlock _title = new();
     readonly TextBlock _errors = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
-    readonly WpfUiButton _save = new() { Content = Tr.T("Сохранить"), Appearance = ControlAppearance.Primary, MinWidth = 120, Margin = new Thickness(8, 0, 0, 0) };
-    readonly WpfUiButton _layoutButton = new() { Icon = SymbolRegular.Board24, Content = Tr.T("Расположение"), Appearance = ControlAppearance.Transparent, Margin = new Thickness(16, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2), ToolTip = Tr.T("Изменить расположение блоков") };
+    readonly WpfUiButton _save = new() { Content = Tr.T("Save"), Appearance = ControlAppearance.Primary, MinWidth = 120, Margin = new Thickness(8, 0, 0, 0) };
+    readonly WpfUiButton _layoutButton = new() { Icon = SymbolRegular.Board24, Content = Tr.T("Layout"), Appearance = ControlAppearance.Transparent, Margin = new Thickness(16, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2), ToolTip = Tr.T("Edit the block layout") };
     readonly Dictionary<string, Block> _blocks = [];
     readonly Dictionary<ParameterId, ParameterCard> _cards = [];
     readonly BoardDrag _drag;
@@ -64,9 +64,9 @@ public sealed class ProfileEditorWindow : BaseWindow
         _scroll.Content = _board;
         _drag = new BoardDrag(_columns, _scroll, _board, SaveLayout);
 
-        AddBlock(EditorLayout.Profile, SymbolRegular.Layer24, "PaletteLightBlueBrush", Tr.T("Профиль"));
-        AddBlock(EditorLayout.Overlaps, SymbolRegular.BranchFork24, "PaletteOrangeBrush", Tr.T("Пересечения"));
-        AddBlock(EditorLayout.Actions, SymbolRegular.Flowchart24, "PalettePurpleBrush", Tr.T("Действия LLT"));
+        AddBlock(EditorLayout.Profile, SymbolRegular.Layer24, "PaletteLightBlueBrush", Tr.T("Profile"));
+        AddBlock(EditorLayout.Overlaps, SymbolRegular.BranchFork24, "PaletteOrangeBrush", Tr.T("Overlaps"));
+        AddBlock(EditorLayout.Actions, SymbolRegular.Flowchart24, "PalettePurpleBrush", Tr.T("LLT actions"));
         foreach (var id in Enum.GetValues<ParameterId>())
         {
             var block = AddBlock(id.ToString(), Texts.ParameterIcon[id], ParameterBrush(id), Texts.Parameter[id]);
@@ -93,7 +93,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         var handle = new Border
         {
             Background = System.Windows.Media.Brushes.Transparent, Cursor = Cursors.SizeAll, Visibility = Visibility.Collapsed,
-            Padding = new Thickness(6, 2, 0, 2), ToolTip = Tr.T("Перетащите блок"),
+            Padding = new Thickness(6, 2, 0, 2), ToolTip = Tr.T("Drag the block"),
         };
         var dots = new SymbolIcon { Symbol = SymbolRegular.ReOrderDotsVertical24, FontSize = 16 };
         dots.SetResourceReference(Control.ForegroundProperty, "TextFillColorTertiaryBrush");
@@ -121,7 +121,7 @@ public sealed class ProfileEditorWindow : BaseWindow
     {
         _layoutMode = on;
         foreach (var b in _blocks.Values) b.Handle.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        _layoutButton.Content = on ? Tr.T("Готово") : Tr.T("Расположение");
+        _layoutButton.Content = on ? Tr.T("Done") : Tr.T("Layout");
         _layoutButton.Appearance = on ? ControlAppearance.Primary : ControlAppearance.Transparent;
         Refresh();                                       // an empty Пересечения block shows while the layout is edited
     }
@@ -138,7 +138,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         catch (Exception e)
         {
             Log.Error("editor layout save", e);
-            _errors.Text = Tr.F("Расположение не сохранено: {0}", e.Message);
+            _errors.Text = Tr.F("Layout not saved: {0}", e.Message);
         }
     }
 
@@ -148,7 +148,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var cancel = new WpfUiButton { Content = Tr.T("Отмена"), MinWidth = 120, Margin = new Thickness(8, 0, 0, 0) };
+        var cancel = new WpfUiButton { Content = Tr.T("Cancel"), MinWidth = 120, Margin = new Thickness(8, 0, 0, 0) };
         cancel.Click += (_, _) => Close();
         _save.Click += async (_, _) => await SaveAsync();
         Grid.SetColumn(_save, 1);
@@ -166,7 +166,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         catch (Exception e)
         {
             Log.Error("profile editor refresh", e);
-            _errors.Text = Tr.F("Ошибка: {0}", e.Message);
+            _errors.Text = Tr.F("Error: {0}", e.Message);
             _save.IsEnabled = false;
         }
     }
@@ -178,7 +178,7 @@ public sealed class ProfileEditorWindow : BaseWindow
 
     void RefreshCore()
     {
-        _title.Text = Tr.F("Профиль {0} · {1}", _vm.Index, _vm.Name) + (_vm.Dirty ? Tr.T(" — изменён") : "");
+        _title.Text = Tr.F("Profile {0} · {1}", _vm.Index, _vm.Name) + (_vm.Dirty ? Tr.T(" — modified") : "");
         if (_profileTitle is null || _profileShownFor != _vm.Conditions)
         {
             _profileShownFor = _vm.Conditions;
@@ -207,7 +207,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         catch (Exception e)
         {
             Log.Error("profile save", e);
-            _errors.Text = Tr.F("Не сохранено: {0}", e.Message);
+            _errors.Text = Tr.F("Not saved: {0}", e.Message);
         }
     }
 
@@ -217,7 +217,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         e.Cancel = true;
         try
         {
-            if (!await MessageBoxHelper.ShowAsync(this, Tr.T("Закрыть без сохранения?"), Tr.T("Изменения профиля будут потеряны."), Tr.T("Закрыть"), Tr.T("Остаться"))) return;
+            if (!await MessageBoxHelper.ShowAsync(this, Tr.T("Close without saving?"), Tr.T("The profile changes will be lost."), Tr.T("Close"), Tr.T("Stay"))) return;
             _closingConfirmed = true;
             Close();
         }
@@ -235,30 +235,30 @@ public sealed class ProfileEditorWindow : BaseWindow
         {
             var name = new Wpf.Ui.Controls.TextBox { Text = _vm.Name, MinWidth = 220 };
             name.TextChanged += (_, _) => { var n = name.Text.Trim(); if (n.Length > 0 && n != _vm.Name) _vm.SetName(n); };
-            body.Children.Add(Row(SymbolRegular.Rename24, Tr.T("Название"), name));
+            body.Children.Add(Row(SymbolRegular.Rename24, Tr.T("Name"), name));
 
-            var change = new WpfUiButton { Content = Tr.T("Изменить…"), Margin = new Thickness(8, 0, 0, 0) };
+            var change = new WpfUiButton { Content = Tr.T("Change…"), Margin = new Thickness(8, 0, 0, 0) };
             change.Click += async (_, _) =>
             {
                 try
                 {
-                    var c = await ConditionWindow.AskAsync(this, _vm.List, _vm.Conditions, _vm.Original.Id, Tr.T("Выбрать"));
+                    var c = await ConditionWindow.AskAsync(this, _vm.List, _vm.Conditions, _vm.Original.Id, Tr.T("Select"));
                     if (c is not null && c != _vm.Conditions) _vm.SetConditions(c);
                 }
-                catch (Exception e) { Log.Error("profile conditions", e); _errors.Text = Tr.F("Ошибка: {0}", e.Message); }
+                catch (Exception e) { Log.Error("profile conditions", e); _errors.Text = Tr.F("Error: {0}", e.Message); }
             };
             var conditions = new StackPanel { Orientation = Orientation.Horizontal };
             conditions.Children.Add(Text(ProfileNames.FromConditionsShown(_vm.Conditions), "RowValue"));
             conditions.Children.Add(change);
-            body.Children.Add(Row(SymbolRegular.Filter24, Tr.T("Условия"), conditions));
-            body.Children.Add(Row(SymbolRegular.Timer24, Tr.T("Задержка включения, с"), Number(_vm.DelaySec, 0, 3600, _vm.SetDelay)));
-            body.Children.Add(Row(SymbolRegular.Hourglass24, Tr.T("Удержание после, с"), Number(_vm.HoldSec, 0, 3600, _vm.SetHold)));
+            body.Children.Add(Row(SymbolRegular.Filter24, Tr.T("Conditions"), conditions));
+            body.Children.Add(Row(SymbolRegular.Timer24, Tr.T("Switch-on delay, s"), Number(_vm.DelaySec, 0, 3600, _vm.SetDelay)));
+            body.Children.Add(Row(SymbolRegular.Hourglass24, Tr.T("Hold after, s"), Number(_vm.HoldSec, 0, 3600, _vm.SetHold)));
         }
         else
         {
             body.Children.Add(Text(_vm.IsRoot
-                ? Tr.T("Действует, когда не подходит ни один другой профиль, и даёт значения всем, кто их не задал. Условий нет, все девять параметров заданы.")
-                : Tr.T("Включается вручную (трей, меню рабочего стола), только от батареи; наследует только от «Всегда»."), "SubLine"));
+                ? Tr.T("In force when no other profile matches, and gives values to every profile that sets none. It has no conditions and all nine parameters are set.")
+                : Tr.T("Switched on by hand (tray, desktop menu), on battery only; inherits only from \"Always\"."), "SubLine"));
         }
         return body;
     }
@@ -266,16 +266,16 @@ public sealed class ProfileEditorWindow : BaseWindow
     UIElement OverlapsBody(IReadOnlyList<Overlap> overlaps)
     {
         var body = new StackPanel();
-        if (overlaps.Count == 0) body.Children.Add(Text(Tr.T("Пересечений нет."), "SubLine"));
+        if (overlaps.Count == 0) body.Children.Add(Text(Tr.T("No overlaps."), "SubLine"));
         foreach (var o in overlaps)
         {
             var both = new Conditions(_vm.Conditions.Source ?? o.Other.Conditions.Source, _vm.Conditions.Lid ?? o.Other.Conditions.Lid,
                 _vm.Conditions.Load ?? o.Other.Conditions.Load, _vm.Conditions.Monitor ?? o.Other.Conditions.Monitor);
-            body.Children.Add(Text(Tr.F("совпадает с «{0}» при «{1}», побеждает «{2}»", ProfileNames.Display(o.Other), ProfileNames.FromConditionsShown(both), ProfileNames.Display(o.Winner)),
+            body.Children.Add(Text(Tr.F("matches \"{0}\" when \"{1}\", \"{2}\" wins", ProfileNames.Display(o.Other), ProfileNames.FromConditionsShown(both), ProfileNames.Display(o.Winner)),
                 "RowValue", new Thickness(0, 0, 0, 6)));
         }
         if (overlaps.Count > 0)
-            body.Children.Add(Text(Tr.T("При равной точности условий действует профиль, стоящий выше в списке."), "SubLine", new Thickness(0, 4, 0, 0)));
+            body.Children.Add(Text(Tr.T("When conditions are equally specific, the profile higher in the list is in force."), "SubLine", new Thickness(0, 4, 0, 0)));
         return body;
     }
 
@@ -283,11 +283,11 @@ public sealed class ProfileEditorWindow : BaseWindow
     {
         var body = new StackPanel();
         var pipelines = _vm.Pipelines;
-        if (pipelines.Count == 0) body.Children.Add(Text(Tr.T("Действий нет."), "SubLine"));
+        if (pipelines.Count == 0) body.Children.Add(Text(Tr.T("No actions."), "SubLine"));
         foreach (var e in pipelines)
         {
             var state = e.State == PipelineState.Wins ? "" : " · " + EffectiveActionsWindow.NotRunningText(e);
-            var from = e.Source.Id == _vm.Original.Id ? "" : Tr.F(" · ↳ от «{0}»", ProfileNames.Display(e.Source));
+            var from = e.Source.Id == _vm.Original.Id ? "" : Tr.F(" · ↳ from \"{0}\"", ProfileNames.Display(e.Source));
             body.Children.Add(Text(PipelineName(e.Pipeline), "ItemName"));
             body.Children.Add(Text(KeyText(e.Pipeline.Key) + from + state, "SubLine", new Thickness(0, 0, 0, 8)));
         }
@@ -296,9 +296,9 @@ public sealed class ProfileEditorWindow : BaseWindow
 
     internal static string KeyText(string key) => key switch
     {
-        PipelineKeys.Enter => Tr.T("при входе в профиль"),
-        PipelineKeys.Exit => Tr.T("при выходе из профиля"),
-        _ => Tr.T("по событию LLT"),
+        PipelineKeys.Enter => Tr.T("on entering the profile"),
+        PipelineKeys.Exit => Tr.T("on leaving the profile"),
+        _ => Tr.T("on an LLT event"),
     };
 
     internal static string PipelineName(Pipeline p)
@@ -306,7 +306,7 @@ public sealed class ProfileEditorWindow : BaseWindow
         try
         {
             using var doc = JsonDocument.Parse(p.Llt);
-            if (doc.RootElement.TryGetProperty("Name", out var n) && n.GetString() is { Length: > 0 } s) return Tr.T(s);
+            if (doc.RootElement.TryGetProperty("Name", out var n) && n.GetString() is { Length: > 0 } s) return Tr.T(PipelineNames.Canonical(s));
         }
         catch (JsonException) { }
         try
@@ -315,7 +315,7 @@ public sealed class ProfileEditorWindow : BaseWindow
             if (Pipelines.PipelineJson.Read(p.Llt).Trigger is { } t) return t.DisplayName;
         }
         catch (Exception e) { Log.Trace("pipeline name: " + e.Message); }
-        return Tr.T("Без названия");
+        return Tr.T("Unnamed");
     }
 
     static UIElement Number(int value, int min, int max, Action<int> changed)
@@ -356,7 +356,7 @@ public sealed class ProfileEditorWindow : BaseWindow
                     else _w._vm.Own(_id);
                     Refresh(rebuild: true);
                 }
-                catch (Exception e) { Log.Error("parameter inherit / own", e); _w._errors.Text = Tr.F("Ошибка: {0}", e.Message); }
+                catch (Exception e) { Log.Error("parameter inherit / own", e); _w._errors.Text = Tr.F("Error: {0}", e.Message); }
             };
             var body = new StackPanel();
             body.Children.Add(_value);
@@ -372,8 +372,8 @@ public sealed class ProfileEditorWindow : BaseWindow
             var (value, source) = vm.EffectiveOf(_id);
             var own = vm.Set.IsSet(_id);
             _value.Text = ValueText.Of(_id, value, ProfileNames.Display(source));
-            _source.Text = own ? Tr.T("задан в этом профиле") : Tr.F("↳ от «{0}»", ProfileNames.Display(source));
-            _toggle.Content = own ? Tr.T("Вернуть унаследованное") : Tr.T("Задать здесь");
+            _source.Text = own ? Tr.T("set in this profile") : Tr.F("↳ from \"{0}\"", ProfileNames.Display(source));
+            _toggle.Content = own ? Tr.T("Restore inherited") : Tr.T("Set here");
             _toggle.Visibility = own && vm.IsRoot ? Visibility.Collapsed : Visibility.Visible;
             if (!rebuild && _shownSet == own) return;
             _shownSet = own;
@@ -385,7 +385,7 @@ public sealed class ProfileEditorWindow : BaseWindow
                         vm.SetParameter(_id, change(vm.Set.Get(_id)!));
                         if (again) Refresh(rebuild: true);
                     }
-                    catch (Exception e) { Log.Error("parameter edit", e); _w._errors.Text = Tr.F("Ошибка: {0}", e.Message); }
+                    catch (Exception e) { Log.Error("parameter edit", e); _w._errors.Text = Tr.F("Error: {0}", e.Message); }
                 })
                 : null;
             if (own && _id == ParameterId.Power && vm.Set.Power is { OwnPreset: true }) AddPresetButton();
@@ -401,14 +401,14 @@ public sealed class ProfileEditorWindow : BaseWindow
             var editors = (UIElement)_controls.Content;
             _controls.Content = null;                       // an element has one logical parent
             panel.Children.Add(editors);
-            var button = new WpfUiButton { Content = Tr.T("Настроить пресет…"), Icon = SymbolRegular.Gauge24, IsEnabled = saved, Margin = new Thickness(0, 0, 0, 4) };
+            var button = new WpfUiButton { Content = Tr.T("Edit preset…"), Icon = SymbolRegular.Gauge24, IsEnabled = saved, Margin = new Thickness(0, 0, 0, 4) };
             button.Click += async (_, _) =>
             {
                 try { await PresetEditor.EditAsync(_w, vm.Host, vm.Original); }
-                catch (Exception e) { Log.Error("preset editor", e); _w._errors.Text = Tr.F("Ошибка: {0}", e.Message); }
+                catch (Exception e) { Log.Error("preset editor", e); _w._errors.Text = Tr.F("Error: {0}", e.Message); }
             };
             panel.Children.Add(button);
-            if (!saved) panel.Children.Add(Text(Tr.T("Сохраните профиль, чтобы настроить его пресет в окне GodMode."), "SubLine"));
+            if (!saved) panel.Children.Add(Text(Tr.T("Save the profile to edit its preset in the GodMode window."), "SubLine"));
             _controls.Content = panel;
         }
     }

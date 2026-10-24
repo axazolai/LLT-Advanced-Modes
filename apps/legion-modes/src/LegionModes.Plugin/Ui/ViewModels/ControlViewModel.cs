@@ -55,7 +55,7 @@ public sealed class ControlViewModel : TabViewModel
         Raise(nameof(PauseState));
     }
 
-    public string ControlState => _doc.Host.HasControl ? Tr.T("Плагин управляет режимами") : Tr.T("Управление у LLT");
+    public string ControlState => _doc.Host.HasControl ? Tr.T("The plugin controls the modes") : Tr.T("LLT has control");
     public Tone ControlTone => _doc.Host.HasControl ? Tone.Good : Tone.Warn;
 
     // «идёт, осталось 12:30» or «не включена»; the pause itself is a quick action (tray, desktop menu).
@@ -64,10 +64,10 @@ public sealed class ControlViewModel : TabViewModel
         get
         {
             var pause = _doc.Host.Last?.Overrides.FirstOrDefault(o => o.Kind == Core.Engine.OverrideKind.Pause);
-            if (pause is null) return Tr.T("не включена");
-            if (pause.Until is not { } until) return Tr.T("идёт");
+            if (pause is null) return Tr.T("off|3");
+            if (pause.Until is not { } until) return Tr.T("active");
             var left = until - DateTimeOffset.Now;
-            return left > TimeSpan.Zero ? Tr.F("идёт, осталось {0}:{1:00}", (int)left.TotalMinutes, left.Seconds) : Tr.T("заканчивается");
+            return left > TimeSpan.Zero ? Tr.F("active, {0}:{1:00} left", (int)left.TotalMinutes, left.Seconds) : Tr.T("ending");
         }
     }
 
@@ -81,7 +81,7 @@ public sealed class ControlViewModel : TabViewModel
     {
         var path = _doc.Host.LightingSnapshotPath;
         var at = await Task.Run(() => File.Exists(path) ? File.GetLastWriteTime(path) : (DateTime?)null);
-        SnapshotText = at is { } t ? Tr.F("снят {0:dd.MM.yyyy HH:mm}", t) : Tr.T("нет: сброс к заводским не тронет подсветку");
+        SnapshotText = at is { } t ? Tr.F("taken {0:dd.MM.yyyy HH:mm}", t) : Tr.T("none: a factory reset will not touch the lighting");
     }
 
     public string PauseText
@@ -92,67 +92,65 @@ public sealed class ControlViewModel : TabViewModel
 
     public string? PauseError =>
         int.TryParse(_pauseText?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var m) && m is >= 1 and <= 1440
-            ? null : Tr.T("Длительность паузы: целое число минут от 1 до 1440");
+            ? null : Tr.T("Pause length: a whole number of minutes from 1 to 1440");
 
-    Task TakeAsync() => GuardAsync(Tr.T("Не удалось взять управление"), async () =>
+    Task TakeAsync() => GuardAsync(Tr.T("Could not take control"), async () =>
     {
-        if (!await _dialogs.ConfirmAsync(Tr.T("Взять управление?"), Tr.T("Автоматизация LLT будет выключена, привязка режимов питания LLT остановлена, " +
-                "действие крышки станет «ничего не делать». Прежние значения сохраняются и вернутся кнопкой «Вернуть управление»."),
-                Tr.T("Взять управление"))) return;
+        if (!await _dialogs.ConfirmAsync(Tr.T("Take control?"), Tr.T("LLT automation will be turned off, LLT power mode binding stopped, and the lid action set to \"do nothing\". The previous values are saved and come back with the \"Return control\" button."),
+                Tr.T("Take control"))) return;
         var error = await _doc.Host.TakeControlAsync();
-        if (error is null) Info(Tr.T("Управление взято"));
+        if (error is null) Info(Tr.T("Control taken"));
         else { IsError = true; Message = error; }
         RefreshState();
     });
 
-    Task ReturnAsync() => GuardAsync(Tr.T("Не удалось вернуть управление"), async () =>
+    Task ReturnAsync() => GuardAsync(Tr.T("Could not return control"), async () =>
     {
-        if (!await Task.Run(() => _doc.Host.ControlHeld)) { IsError = true; Message = Tr.T("управление не было взято"); return; }
-        if (!await _dialogs.ConfirmAsync(Tr.T("Вернуть управление LLT?"),
-                Tr.T("Плагин перестанет применять режимы, сохранённые значения LLT и Windows будут восстановлены."), Tr.T("Вернуть"))) return;
+        if (!await Task.Run(() => _doc.Host.ControlHeld)) { IsError = true; Message = Tr.T("control was not taken"); return; }
+        if (!await _dialogs.ConfirmAsync(Tr.T("Return control to LLT?"),
+                Tr.T("The plugin will stop applying modes; the saved LLT and Windows values will be restored."), Tr.T("Return"))) return;
         var error = await _doc.Host.ReturnControlAsync();
-        if (error is null) Info(Tr.T("Управление возвращено"));
+        if (error is null) Info(Tr.T("Control returned"));
         else { IsError = true; Message = error; }
         RefreshState();
     });
 
-    Task SavePauseAsync() => GuardAsync(Tr.T("Не удалось сохранить паузу"), async () =>
+    Task SavePauseAsync() => GuardAsync(Tr.T("Could not save the pause"), async () =>
     {
         if (PauseError is not null) return;
         var minutes = int.Parse(_pauseText.Trim(), CultureInfo.InvariantCulture);
         var warn = await _doc.SaveModesAsync(_doc.Modes with { PauseMinutes = minutes });
-        Saved(Tr.T("Длительность паузы сохранена"), warn);
+        Saved(Tr.T("Pause length saved"), warn);
     });
 
-    Task SnapshotAsync() => GuardAsync(Tr.T("Не удалось снять подсветку"), async () =>
+    Task SnapshotAsync() => GuardAsync(Tr.T("Could not capture the lighting"), async () =>
     {
         var path = _doc.Host.LightingSnapshotPath;
-        if (await Task.Run(() => File.Exists(path)) && !await _dialogs.ConfirmAsync(Tr.T("Снимок подсветки уже есть"),
-                Tr.T("Заменить его текущими эффектами клавиатуры?"), Tr.T("Заменить"))) return;
+        if (await Task.Run(() => File.Exists(path)) && !await _dialogs.ConfirmAsync(Tr.T("A lighting snapshot already exists"),
+                Tr.T("Replace it with the current keyboard effects?"), Tr.T("Replace"))) return;
         await LightingStore.SnapshotAsync(path);
         await RefreshSnapshotAsync();
-        Info(Tr.T("Снимок подсветки сохранён"));
+        Info(Tr.T("Lighting snapshot saved"));
     });
 
-    Task FactoryResetAsync() => GuardAsync(Tr.T("Не удалось сбросить к заводским"), async () =>
+    Task FactoryResetAsync() => GuardAsync(Tr.T("Could not reset to factory"), async () =>
     {
-        if (!await _dialogs.ConfirmAsync(Tr.T("Сбросить профили к заводским значениям?"),
-                Tr.T("Профили и их действия будут заменены заводскими, пресеты «AM · …» получат заводские значения, " +
-                "эффекты подсветки вернутся из снимка, если он есть. Список программ не изменится."), Tr.T("Сбросить"))) return;
+        if (!await _dialogs.ConfirmAsync(Tr.T("Reset profiles to factory values?"),
+                Tr.T("Profiles and their actions will be replaced with the factory ones, the \"AM · …\" presets get factory values, and lighting effects return from the snapshot if there is one. The program list is not changed."), Tr.T("Reset|2"))) return;
         var warn = await _doc.ResetModesToFactoryAsync();
         var snapshot = _doc.Host.LightingSnapshotPath;
         if (await Task.Run(() => File.Exists(snapshot))) await LightingStore.RestoreAsync(snapshot);
-        Saved(Tr.T("Заводские значения восстановлены"), warn);
+        Saved(Tr.T("Factory values restored"), warn);
     });
 
-    Task ResetProgramsAsync() => GuardAsync(Tr.T("Не удалось сбросить списки программ"), async () =>
+    Task ResetProgramsAsync() => GuardAsync(Tr.T("Could not reset the program lists"), async () =>
     {
-        if (!await _dialogs.ConfirmAsync(Tr.T("Очистить список программ?"), Tr.T("Все записи о программах будут удалены."), Tr.T("Очистить"))) return;
+        if (!await _dialogs.ConfirmAsync(Tr.T("Clear the program list?"), Tr.T("All program entries will be deleted."), Tr.T("Clear"))) return;
         var warn = await _doc.SaveProgramsAsync(new ProgramsConfig(ProgramsConfig.CurrentSchema, []));
-        Saved(Tr.T("Списки программ очищены"), warn);
+        Saved(Tr.T("Program lists cleared"), warn);
     });
 
-    Task OpenLogsAsync() => GuardAsync(Tr.T("Не удалось открыть папку логов"), () =>
+    Task OpenLogsAsync() => GuardAsync(Tr.T("Could not open the logs folder"), () =>
     {
         _dialogs.OpenFolder(LogsPath);
         return Task.CompletedTask;

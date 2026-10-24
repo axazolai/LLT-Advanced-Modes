@@ -28,11 +28,12 @@ win when several fire. This plugin builds a layer on top:
 | GodMode presets | One at a time, by hand | The plugin keeps **a preset per profile** (`AM · <profile name>`), writes the factory curves and limits, and verifies the fan table and GPU values after every apply |
 | Lid and bag safety | Windows lid action | The plugin sets the lid action to "do nothing" while it is in control; a **guard service** puts a closed laptop with no display to sleep after a minute when the plugin is silent, whatever has crashed |
 | Idle | Windows timers | Four stages (dim, display off, sleep, hibernate) per profile; video players and wake requests are read from Windows power requests; a per-program switch to ignore a program's requests |
-| Updates of LLT | Updater | A **keeper**: compatibility check of the plugin against the new LLT release (every reference and reflection contract), backup, update, settings reconciliation, self-test and **automatic rollback**. Nothing changes without your word |
+| Updates of LLT | Updater | LLT is **pinned** to the version the package carries. A **keeper** checks the new releases and reports whether the plugin is compatible with them (every reference, reflection contract and referenced assembly version); it installs nothing by itself. A new LLT is installed by you, after you have looked at the result, and the pin moves with it |
 | Manual overrides | Quick actions | Autonomy (battery life) profile, stay awake, rapid charge, charge to full, force a workload, pause – each lifted by the right event (an adapter, the lid, a reboot) |
+| Status | – | Under every parameter the page shows what the hardware itself reports (firmware, controller, display path, power scheme, battery, drivers) beside what the profile asks for, and warns when they differ; the discrete card's presence, temperature and load are live |
 | Interface | – | A page inside LLT, tray items, a dashboard card and a desktop context menu, all in LLT's own look; English and Russian built in, **more languages as plain files** |
 
-The factory set has 24 profiles tuned for this laptop (see `docs/` in the source for the values). Reset to factory is one button.
+The factory set has 25 profiles tuned for this laptop (see `docs/` in the source for the values). Reset to factory is one button.
 
 ## Screenshots
 
@@ -85,32 +86,33 @@ hash, builds, runs the tests and stages the package in `depot\software\legion-mo
 
 The interface follows LLT's own language setting (LLT *Settings → Language*) and changes **without a restart**.
 
-- Russian LLT → Russian interface. Every other LLT language → English, unless you add a translation for it.
-- A translation is a file named after the culture code: `de.json`, `fr.json`, `pt-BR.json`. It is a flat JSON object that maps the
-  **Russian source text** to your text:
+- The texts of the plugin are English **keys**. A translation is a file named after the culture code (`ru.json`, `de.json`,
+  `pt-BR.json`): a flat JSON object that maps the English key to your text:
 
   ```json
   {
-    "Статус": "Status",
-    "Профили": "Profiles",
-    "Найдено {0}": "Found {0}"
+    "Status": "Status",
+    "Profiles": "Profiles",
+    "Found {0}": "Found {0}"
   }
   ```
 
-  Keep the `{0}`, `{1}` placeholders as they are.
-- The English file `lang\en.json` of the package is the template: copy it (`src/LegionModes.Plugin/lang/en.json` in the source),
-  rename it and translate the values.
-- Put your file into
-  `%LOCALAPPDATA%\LenovoLegionToolkit\Plugins\Configs\LegionModes\lang\` – this folder is never touched by installs and updates.
-  The package's own folder (`...\Plugins\LegionModes\lang\`) is replaced on every update.
-- Lookup for LLT language `de-DE`: `en` is the base, `de` is laid over it, `de-DE` over that; your folder is laid over the package's.
-  A missing key falls back to English, then to the Russian source text.
+  Keep the `{0}`, `{1}` placeholders as they are. A key that ends in `|2`, `|3` tells two meanings of one English word apart
+  (`Update` and `Update|2`); the suffix is never shown.
+- The package ships `lang\en.json` (every key mapped to itself: edit a value to reword the English text) and `lang\ru.json`
+  (the Russian texts). `en.json` is the template for a new language: copy it, rename it, translate the values.
+- Without a file for the language the English keys show. So: Russian LLT → Russian, every other LLT language → English until
+  you add its file.
+- Put your file into `%LOCALAPPDATA%\LenovoLegionToolkit\Plugins\Configs\LegionModes\lang\` – this folder is never touched by
+  installs and updates. The package's own folder (`...\Plugins\LegionModes\lang\`) is replaced on every update. Your folder is
+  laid over the package's, so you can also override single Russian or English texts there.
+- For LLT language `de-DE` the files `de.json`, then `de-DE.json` are laid over each other; a missing key shows English.
 - **Profile names** are translatable too, without a screen for it: a name you type is saved under the interface language you are
   using; a profile without a name in the current language shows its English name (the built-in profiles have both Russian and English
   names). The GodMode presets in LLT's list are labelled `AM · <name in the current language>`.
 
-Pull requests with new languages are welcome: add `src/LegionModes.Plugin/lang/<code>.json` (the test suite checks the English file
-against the sources).
+Pull requests with new languages are welcome: add `apps/legion-modes/src/LegionModes.Plugin/lang/<code>.json` (the test suite
+checks that every key used in the code is in `en.json` and `ru.json` with the same placeholders).
 
 ## Safety
 
@@ -118,7 +120,7 @@ against the sources).
   make a machine hot, loud or unstable. The factory values are measured for one laptop.
 - It never takes control on its own: the take-control button is yours. A crash of the plugin, of LLT or of the scheduled task is
   covered by the guard (a closed laptop with no display goes to sleep, never stays awake in a bag).
-- LLT is moved to a new version only on your word, after a compatibility check, with a backup and an automatic rollback.
+- LLT is pinned. The plugin reports a newer release and its compatibility result and installs nothing; you move to a new version yourself.
 - The factory profiles use no undervolting. If a profile sets the all-core Curve Optimizer and the machine shuts down abnormally
   three times in a row, the plugin writes it back to 0 in every preset.
 

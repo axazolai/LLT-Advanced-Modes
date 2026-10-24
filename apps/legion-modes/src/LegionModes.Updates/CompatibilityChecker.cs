@@ -45,6 +45,46 @@ public static class CompatibilityChecker
         return result;
     }
 
+    // The assemblies the plugin loads into the host (LegionModes.dll and the LegionModes.Core.dll beside it) reference host assemblies by
+    // version; a host copy with a lower version than the reference fails to load (FileLoadException). One problem per such reference.
+    public static IReadOnlyList<string> ReferenceVersionProblems(string pluginAssembly, string hostDir)
+    {
+        var problems = new List<string>();
+        var core = Path.Combine(Path.GetDirectoryName(pluginAssembly) ?? "", "LegionModes.Core.dll");
+        foreach (var path in new[] { pluginAssembly, core }.Where(File.Exists))
+        {
+            try
+            {
+                using var s = File.OpenRead(path);
+                using var pe = new PEReader(s);
+                var md = pe.GetMetadataReader();
+                foreach (var h in md.AssemblyReferences)
+                {
+                    var r = md.GetAssemblyReference(h);
+                    var name = md.GetString(r.Name);
+                    var host = new[] { ".dll", ".exe" }.Select(e => Path.Combine(hostDir, name + e)).FirstOrDefault(File.Exists);
+                    if (host is null) continue;
+                    var hostVersion = VersionOf(host);
+                    if (hostVersion is not null && hostVersion < r.Version)
+                        problems.Add($"{Path.GetFileName(path)} references {name} {r.Version}, the host has {hostVersion}");
+                }
+            }
+            catch (Exception ex) { problems.Add($"references of {Path.GetFileName(path)} cannot be read: {ex.Message}"); }
+        }
+        return problems;
+    }
+
+    private static Version? VersionOf(string assemblyFile)
+    {
+        try
+        {
+            using var s = File.OpenRead(assemblyFile);
+            using var pe = new PEReader(s);
+            return pe.GetMetadataReader().GetAssemblyDefinition().Version;
+        }
+        catch { return null; }   // not an assembly: Check reports the file where it is needed
+    }
+
     // pluginAssembly: the built LegionModes.dll; hostDir: extracted {app} of the new release;
     // hostAssemblies: simple names that count as host (compared case-insensitively).
     public static CompatibilityReport Check(string pluginAssembly, string hostDir,
@@ -70,6 +110,8 @@ public static class CompatibilityChecker
     {
         if (!File.Exists(pluginAssembly)) { problems.Add($"plugin assembly not found: {pluginAssembly}"); return 0; }
         if (!Directory.Exists(hostDir)) { problems.Add($"host directory not found: {hostDir}"); return 0; }
+
+        problems.AddRange(ReferenceVersionProblems(pluginAssembly, hostDir));
 
         using var peStream = File.OpenRead(pluginAssembly);
         using var pe = new PEReader(peStream);

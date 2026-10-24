@@ -17,7 +17,7 @@ public sealed class EffectiveActionsWindow : BaseWindow
 {
     EffectiveActionsWindow(ModesConfig config, Profile p)
     {
-        Title = Tr.T("Итоговые действия");
+        Title = Tr.T("Effective actions");
         Width = 760;
         Height = 720;
         MinWidth = 560;
@@ -30,7 +30,7 @@ public sealed class EffectiveActionsWindow : BaseWindow
         var list = new StackPanel { Margin = new Thickness(16, 0, 16, 12) };
         var wins = all.Where(e => e.State == PipelineState.Wins).ToList();
         if (wins.Count == 0)
-            list.Children.Add(Card(SymbolRegular.Flowchart24, "PalettePurpleBrush", Tr.T("Действий нет"), Text(Tr.T("В этом профиле не выполняется ни одно действие LLT."), "SubLine")));
+            list.Children.Add(Card(SymbolRegular.Flowchart24, "PalettePurpleBrush", Tr.T("No actions"), Text(Tr.T("This profile runs no LLT actions."), "SubLine")));
         foreach (var e in wins) list.Children.Add(PipelineCard(e, p));
 
         var others = all.Where(e => e.State != PipelineState.Wins).ToList();
@@ -40,14 +40,14 @@ public sealed class EffectiveActionsWindow : BaseWindow
             foreach (var e in others) folded.Children.Add(PipelineCard(e, p));
             list.Children.Add(new LenovoLegionToolkit.WPF.Controls.Custom.CardExpander
             {
-                Header = new CardHeaderControl { Title = Tr.F("Выключенные ({0})", others.Count), Subtitle = Tr.T("Не выполняются в этом профиле") },
+                Header = new CardHeaderControl { Title = Tr.F("Turned off ({0})", others.Count), Subtitle = Tr.T("Not run in this profile") },
                 Icon = SymbolRegular.EyeOff24,
                 Content = folded,
                 Margin = new Thickness(0, 0, 0, 10),
             });
         }
 
-        var title = new TextBlock { Text = Tr.F("Итоговые действия · {0} · {1}", config.IndexOf(p), ProfileNames.Display(p)) };
+        var title = new TextBlock { Text = Tr.F("Effective actions · {0} · {1}", config.IndexOf(p), ProfileNames.Display(p)) };
         Content = Frame(SymbolRegular.Flowchart24, "PalettePurpleBrush", title,
             new Wpf.Ui.Controls.DynamicScrollViewer { Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }, null);
     }
@@ -59,9 +59,9 @@ public sealed class EffectiveActionsWindow : BaseWindow
     {
         var body = new StackPanel();
         var (when, steps) = Describe(e.Pipeline);
-        body.Children.Add(Row(SymbolRegular.Flash24, Tr.T("Когда"), Text(when, "RowValue")));
-        body.Children.Add(Row(SymbolRegular.TextBulletListLtr24, Tr.T("Шаги"), Text(steps, "RowValue")));
-        body.Children.Add(Row(SymbolRegular.Layer24, Tr.T("Из профиля"), Text(e.Source.Id == inForce.Id ? Tr.F("«{0}» (свой)", ProfileNames.Display(e.Source)) : $"«{ProfileNames.Display(e.Source)}»", "RowValue")));
+        body.Children.Add(Row(SymbolRegular.Flash24, Tr.T("When"), Text(when, "RowValue")));
+        body.Children.Add(Row(SymbolRegular.TextBulletListLtr24, Tr.T("Steps"), Text(steps, "RowValue")));
+        body.Children.Add(Row(SymbolRegular.Layer24, Tr.T("From profile"), Text(e.Source.Id == inForce.Id ? Tr.F("\"{0}\" (own)", ProfileNames.Display(e.Source)) : $"«{ProfileNames.Display(e.Source)}»", "RowValue")));
         if (e.State != PipelineState.Wins)
             body.Children.Add(Text(NotRunningText(e), "SubLine"));
         return Card(SymbolRegular.Flowchart24, e.State == PipelineState.Wins ? "PalettePurpleBrush" : "TextFillColorTertiaryBrush",
@@ -70,7 +70,7 @@ public sealed class EffectiveActionsWindow : BaseWindow
 
     // Why a pipeline does not run here.
     internal static string NotRunningText(EffectivePipeline e) =>
-        e.State == PipelineState.Blocked ? Tr.F("выключен в «{0}»", e.BlockedBy?.Name is { } bn ? Tr.T(bn) : "") : Tr.T("выключен");
+        e.State == PipelineState.Blocked ? Tr.F("turned off in \"{0}\"", e.BlockedBy?.Name is { } bn ? ProfileNames.DisplayName(bn) : "") : Tr.T("off");
 
     // A step as LLT's add-step list names it (its control's title, in LLT's language), else its type name.
     static string StepTitle(LenovoLegionToolkit.Lib.Automation.Steps.IAutomationStep step)

@@ -15,7 +15,7 @@ public static class FactoryProfiles
     static readonly Guid OllamaId = IdOf("pipeline/ollama");
 
     const string OllamaPipelineTemplate = """
-        {"Id":"{ID}","Name":"Перезапуск ollama serve","Trigger":null,"IsExclusive":false,"RunOnStartup":false,
+        {"Id":"{ID}","Name":"Restart ollama serve","Trigger":null,"IsExclusive":false,"RunOnStartup":false,
          "Steps":[{"$type":"LenovoLegionToolkit.Lib.Automation.Steps.RunAutomationStep, LenovoLegionToolkit.Lib.Automation",
           "ScriptPath":"powershell.exe",
           "ScriptArguments":"-NoProfile -WindowStyle Hidden -Command \"Get-Process ollama -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Process ollama -ArgumentList serve -WindowStyle Hidden\"",
@@ -86,6 +86,8 @@ public static class FactoryProfiles
             Auto("Закрыт", new(Lid: Closed), 0, new Parameters(
                 Panel: new PanelRate(PanelRateKind.DoNotTouch), External: new ExternalMonitor(Projection.ExternalOnly, Max),
                 Timers: Timers(null, 10, 30, 0, 1), Lighting: Dark)),
+
+            Auto("Сеть", new(Source: Ac), 0, new Parameters(Gpu: GpuMode.Hybrid)),
 
             Auto("Слабый адаптер", new(Source: Weak), 0, Own(new Parameters(
                 Panel: Panel60, External: new ExternalMonitor(Projection.Extend, Fixed60), Charging: ChargingMode.Normal,

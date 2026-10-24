@@ -36,31 +36,31 @@ public static class PresetValidator
         {
             var min = Math.Max(0, r.Min + p.MinValueOffset);
             var max = r.Max + p.MaxValueOffset;
-            if (value < min || value > max) errors.Add(Tr.F("{0}: {1} вне {2}..{3}", field, value, min, max));
+            if (value < min || value > max) errors.Add(Tr.F("{0}: {1} is outside {2}..{3}", field, value, min, max));
         }
         void Member(string field, int value, int[] allowed)
         {
-            if (!allowed.Contains(value)) errors.Add(Tr.F("{0}: {1} не из {2}", field, value, string.Join(", ", allowed)));
+            if (!allowed.Contains(value)) errors.Add(Tr.F("{0}: {1} is not one of {2}", field, value, string.Join(", ", allowed)));
         }
 
         // The labels of LLT's GodMode window.
-        Stepper(Tr.T("Длительный лимит мощности CPU, Вт"), p.CpuLongW, FirmwareRanges.CpuLong);
-        Stepper(Tr.T("Кратковременный лимит мощности CPU, Вт"), p.CpuShortW, FirmwareRanges.CpuShort);
-        Stepper(Tr.T("Пиковый лимит мощности CPU, Вт"), p.CpuPeakW, FirmwareRanges.CpuPeak);
-        Stepper(Tr.T("Лимит мощности CPU при нагрузке на GPU, Вт"), p.CpuCrossW, FirmwareRanges.CpuCross);
-        Stepper(Tr.T("Предел температуры CPU, °C"), p.CpuTempC, FirmwareRanges.CpuTemp);
-        Stepper(Tr.T("Предел температуры GPU, °C"), p.GpuTempC, FirmwareRanges.GpuTemp);
-        Stepper(Tr.T("Общая мощность (TPP), Вт"), p.TppW, FirmwareRanges.Tpp);
+        Stepper(Tr.T("CPU long-term power limit, W"), p.CpuLongW, FirmwareRanges.CpuLong);
+        Stepper(Tr.T("CPU short-term power limit, W"), p.CpuShortW, FirmwareRanges.CpuShort);
+        Stepper(Tr.T("CPU peak power limit, W"), p.CpuPeakW, FirmwareRanges.CpuPeak);
+        Stepper(Tr.T("CPU power limit under GPU load, W"), p.CpuCrossW, FirmwareRanges.CpuCross);
+        Stepper(Tr.T("CPU temperature limit, °C"), p.CpuTempC, FirmwareRanges.CpuTemp);
+        Stepper(Tr.T("GPU temperature limit, °C"), p.GpuTempC, FirmwareRanges.GpuTemp);
+        Stepper(Tr.T("Total power (TPP), W"), p.TppW, FirmwareRanges.Tpp);
         Stepper("Curve Optimizer", p.CurveOptimizer, FirmwareRanges.CurveOptimizer);
-        Member(Tr.T("Dynamic Boost, Вт"), p.DynamicBoostW, FirmwareRanges.DynamicBoost);
-        Member(Tr.T("Настраиваемый TGP, Вт"), p.ConfigurableTgpW, FirmwareRanges.ConfigurableTgp);
+        Member(Tr.T("Dynamic Boost, W"), p.DynamicBoostW, FirmwareRanges.DynamicBoost);
+        Member(Tr.T("Configurable TGP, W"), p.ConfigurableTgpW, FirmwareRanges.ConfigurableTgp);
 
         if (p.FanCurve is null || p.FanCurve.Length != FirmwareRanges.FanMinimum.Length)
-            errors.Add(Tr.F("кривая вентиляторов: {0} точек, нужно {1}", p.FanCurve?.Length ?? 0, FirmwareRanges.FanMinimum.Length));
+            errors.Add(Tr.F("fan curve: {0} points, {1} required", p.FanCurve?.Length ?? 0, FirmwareRanges.FanMinimum.Length));
         else
             for (var i = 0; i < p.FanCurve.Length; i++)
                 if (p.FanCurve[i] < FirmwareRanges.FanMinimum[i] || p.FanCurve[i] > 10)
-                    errors.Add(Tr.F("кривая вентиляторов, точка {0}: {1} вне {2}..10", i + 1, p.FanCurve[i], FirmwareRanges.FanMinimum[i]));
+                    errors.Add(Tr.F("fan curve, point {0}: {1} is outside {2}..10", i + 1, p.FanCurve[i], FirmwareRanges.FanMinimum[i]));
         return errors;
     }
 }

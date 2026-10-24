@@ -42,7 +42,7 @@ internal sealed class SystemClock : IClock
 
 // A save the loader would reject; nothing was written. The message lists the errors.
 public sealed class ConfigInvalidException(IReadOnlyList<string> errors)
-    : Exception(Tr.F("конфигурация не записана: {0}", string.Join(" | ", errors)))
+    : Exception(Tr.F("configuration not saved: {0}", string.Join(" | ", errors)))
 {
     public IReadOnlyList<string> Errors { get; } = errors;
 }
@@ -107,6 +107,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
     DisplayStateWatcher? _display;
 
     int _godModeHold;
+    bool _presetRenamePending;
     int _startupRun;                         // the StartupAutomationEvent goes out once, with the first apply under control
     Pipelines.PipelineRunner? _pipes;
     Pipelines.LltEvents? _lltEvents;
@@ -114,6 +115,8 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
 
     public StatusModel Status { get; }
     public Status.DeviceStatus Devices { get; }
+    public Status.DgpuLive? GpuLive { get; private set; }
+    public Status.LiveFacts? Facts { get; private set; }
     Shell.ShellInjector? _shell;
     Shell.LanguageWatcher? _language;
     Shell.Notifier? _notifier;
@@ -127,6 +130,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
     {
         if (Interlocked.Decrement(ref _godModeHold) > 0) return;
         Interlocked.Exchange(ref _godModeHold, 0);
+        if (_presetRenamePending) { _presetRenamePending = false; _ = SyncPresetsAsync(); }
         if (!_hasControl) return;
         lock (_gate) { _lastApplied = null; _retry.Forget(ParameterId.Power); _fullPending = true; _immediate = true; }
     }
@@ -280,6 +284,13 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
     {
         try { Devices.Start(); }
         catch (Exception e) { Log.Error("device status start", e); }
+        if (Applier is Apply.Applier)
+        {
+            try { GpuLive = new Status.DgpuLive(); GpuLive.Start(); }
+            catch (Exception e) { Log.Error("dGPU live start", e); GpuLive = null; }
+            try { Facts = new Status.LiveFacts(); Facts.Start(); }
+            catch (Exception e) { Log.Error("live facts start", e); Facts = null; }
+        }
         try { Devices.PropertyChanged += (_, e) => { if (e.PropertyName == "MicMuted") SyncMenu(); }; }
         catch (Exception e) { Log.Error("device status menu hook", e); }
         try { _notifier = new Shell.Notifier(this, _dataDir); _notifier.Start(); }
@@ -386,7 +397,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
         {
             await Apply.CurveOptimizerReset.RunAsync().ConfigureAwait(false);
             Log.Trace("Curve Optimizer reset after repeated abnormal shutdowns");
-            Shell.Notifier.Show(Tr.T("Curve Optimizer сброшен в 0 после трёх аварийных завершений подряд"));
+            Shell.Notifier.Show(Tr.T("Curve Optimizer reset to 0 after three crashes in a row"));
         }
         catch (Exception e)
         {
@@ -592,7 +603,8 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
     void OnLanguageChanged()
     {
         SyncMenu();
-        _ = SyncPresetsAsync();
+        if (Volatile.Read(ref _godModeHold) > 0) _presetRenamePending = true;   // LLT's GodMode window is open: its save would overwrite the rename
+        else _ = SyncPresetsAsync();
     }
 
     // After every decision change and when the microphone state changes.
@@ -622,6 +634,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
             // «выход» of the old profile (awaited at most 10 s), the parameters, «вход» of the new one (queued, not awaited).
             if (d.Transition is { } t) await pipes.OnTransitionAsync(config, t, () => ApplyCoreAsync(d, full)).ConfigureAwait(false);
             else await ApplyCoreAsync(d, full).ConfigureAwait(false);
+            if (d.Transition is { From: not null } changed) Shell.Notifier.ShowProfile(ProfileNames.Display(changed.To));
             if (Interlocked.Exchange(ref _startupRun, 1) == 0) _ = pipes.OnStartAsync(config, d.Profile);
         }
         catch (Exception e) { Log.Error("pipelines", e); }
@@ -685,7 +698,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
                     {
                         ResultKind.Ok => "ok",
                         ResultKind.Note => StatusModel.NotePrefix + r.Text,
-                        _ => r.Text ?? Tr.T("ошибка"),
+                        _ => r.Text ?? Tr.T("error"),
                     };
                 }
                 Status.ParameterResults = new Dictionary<ParameterId, string>(_results);
@@ -823,7 +836,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
         }
         Status.ConfigError = null;
         if (_lltEvents is { } events) await events.UpdateAsync(c).ConfigureAwait(false);
-        if (presetError is not null) throw new InvalidOperationException(Tr.F("пресеты GodMode: {0}", presetError));
+        if (presetError is not null) throw new InvalidOperationException(Tr.F("GodMode presets: {0}", presetError));
     }
 
     public async Task SavePrograms(ProgramsConfig c)
@@ -981,7 +994,7 @@ public sealed partial class Runtime : IAsyncDisposable, Ui.IModesHost
             if (await _applyGate.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false)) _applyGate.Release();
         }
         catch (Exception e) { Log.Error("wait for in-flight work", e); }
-        try { Tr.Changed -= OnLanguageChanged; _language?.Dispose(); _shell?.Dispose(); _notifier?.Dispose(); Devices.Dispose(); } catch (Exception e) { Log.Error("dispose shell", e); }
+        try { Tr.Changed -= OnLanguageChanged; _language?.Dispose(); _shell?.Dispose(); _notifier?.Dispose(); Devices.Dispose(); GpuLive?.Dispose(); Facts?.Dispose(); } catch (Exception e) { Log.Error("dispose shell", e); }
         try { if (_lltEvents is { } events) await events.DisposeAsync().ConfigureAwait(false); } catch (Exception e) { Log.Error("dispose LLT events", e); }
         try { _display?.Dispose(); } catch (Exception e) { Log.Error("dispose display state", e); }
         try { (Applier as Apply.Applier)?.Stop(); } catch (Exception e) { Log.Error("dispose applier", e); }

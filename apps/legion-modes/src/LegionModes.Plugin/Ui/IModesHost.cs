@@ -12,6 +12,8 @@ public interface IModesHost
 {
     StatusModel Status { get; }
     DeviceStatus Devices { get; }
+    LiveFacts? Facts => null;                        // panel and charger state read live, null where there is no hardware
+    DgpuLive? GpuLive => null;                       // the discrete card's live state; null where there is no LLT (the UI stand)
     ModesConfig Config { get; }
     ProgramsConfig Programs { get; }
     Decision? Last { get; }

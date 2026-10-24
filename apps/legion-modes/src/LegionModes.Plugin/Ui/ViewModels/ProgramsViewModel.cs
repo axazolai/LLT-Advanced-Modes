@@ -53,10 +53,10 @@ public sealed class ProgramsViewModel : TabViewModel
 
     public static string ClassName(ProgramClass c) => c switch
     {
-        ProgramClass.Heavy => Tr.T("Тяжёлая"),
-        ProgramClass.Ai => Tr.T("ИИ"),
-        ProgramClass.Work => Tr.T("Работа"),
-        _ => Tr.T("Не учитывать"),
+        ProgramClass.Heavy => Tr.T("Heavy"),
+        ProgramClass.Ai => Tr.T("AI"),
+        ProgramClass.Work => Tr.T("Work"),
+        _ => Tr.T("Ignore"),
     };
 
     public static IReadOnlyList<ProgramClass> Classes { get; } = [ProgramClass.Work, ProgramClass.Ai, ProgramClass.Heavy, ProgramClass.Ignore];
@@ -127,7 +127,7 @@ public sealed class ProgramsViewModel : TabViewModel
         var existing = Items.FirstOrDefault(i => string.Equals(i.Pattern.Trim(), pattern, StringComparison.OrdinalIgnoreCase) && i.CommandLine.Trim().Length == 0);
         if (existing is not null) existing.Class = c;
         else Items.Add(new ProgramItem { Pattern = pattern, Class = c });
-        Info(Tr.F("«{0}» — {1}; не забудьте сохранить", p.Display, ClassName(c).ToLowerInvariant()));
+        Info(Tr.F("\"{0}\" — {1}; remember to save", p.Display, ClassName(c).ToLowerInvariant()));
         Edited();
     }
 
@@ -139,13 +139,13 @@ public sealed class ProgramsViewModel : TabViewModel
 
     ProgramsConfig Build() => new(ProgramsConfig.CurrentSchema, Items.Select(i => i.ToEntry()).ToArray());
 
-    public Task SaveAsync() => GuardAsync(Tr.T("Не удалось сохранить список программ"), async () =>
+    public Task SaveAsync() => GuardAsync(Tr.T("Could not save the program list"), async () =>
     {
         var config = Build();
         var errors = ProgramsStore.Errors(config);
         if (errors.Count > 0) { IsError = true; Message = string.Join("; ", errors); return; }
         var warn = await _doc.SaveProgramsAsync(config);
-        Saved(Tr.T("Список программ сохранён"), warn);
+        Saved(Tr.T("Program list saved"), warn);
     });
 
     // Enumerated off the UI thread: path, command line, window, file description, icon.
@@ -161,7 +161,7 @@ public sealed class ProgramsViewModel : TabViewModel
             });
             Classify();
         }
-        catch (Exception e) { Fail(Tr.T("Не удалось получить список процессов"), e); }
+        catch (Exception e) { Fail(Tr.T("Could not get the process list"), e); }
     }
 
     // Windowed ones first, then the rest; each alphabetically by display name; one row per exe path (or name).

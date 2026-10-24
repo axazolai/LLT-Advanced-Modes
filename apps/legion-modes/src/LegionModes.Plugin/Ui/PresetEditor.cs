@@ -27,7 +27,7 @@ internal static class PresetEditor
         catch (Exception e)
         {
             Log.Error("preset edit", e);
-            await MessageBoxHelper.ShowAsync(owner, Tr.T("Пресет не открыт"), e.Message, "OK", "");
+            await MessageBoxHelper.ShowAsync(owner, Tr.T("Preset not opened"), e.Message, "OK", "");
         }
         finally { host.EndGodModeEdit(); }
     }

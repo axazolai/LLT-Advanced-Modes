@@ -41,7 +41,7 @@ public sealed class AutomationWindow : BaseWindow
 {
     enum Group { Enter, Events, Exit }
 
-    static (Group Group, string Title)[] Groups => [(Group.Enter, Tr.T("ВХОД")), (Group.Events, Tr.T("СОБЫТИЯ")), (Group.Exit, Tr.T("ВЫХОД"))];
+    static (Group Group, string Title)[] Groups => [(Group.Enter, Tr.T("ENTER")), (Group.Events, Tr.T("EVENTS")), (Group.Exit, Tr.T("EXIT"))];
 
     sealed class Entry
     {
@@ -71,7 +71,7 @@ public sealed class AutomationWindow : BaseWindow
     readonly ListDrag _drag;
     readonly TextBlock _title = new();
     readonly TextBlock _errors = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
-    readonly WpfUiButton _save = new() { Content = Tr.T("Сохранить"), Appearance = ControlAppearance.Primary, MinWidth = 120, Margin = new Thickness(8, 0, 0, 0), IsEnabled = false };
+    readonly WpfUiButton _save = new() { Content = Tr.T("Save"), Appearance = ControlAppearance.Primary, MinWidth = 120, Margin = new Thickness(8, 0, 0, 0), IsEnabled = false };
     StepSet? _steps;
     bool _dirty, _closingConfirmed;
 
@@ -81,7 +81,7 @@ public sealed class AutomationWindow : BaseWindow
     {
         _vm = vm;
         _profile = p;
-        Title = Tr.T("Автоматизация");
+        Title = Tr.T("Automation");
         Width = 900;
         Height = 820;
         MinWidth = 700;
@@ -90,26 +90,26 @@ public sealed class AutomationWindow : BaseWindow
         ShowInTaskbar = false;
         Resources.MergedDictionaries.Add(SharedResources.Instance);
         _errors.SetResourceReference(TextBlock.ForegroundProperty, "SystemFillColorCriticalBrush");
-        _title.Text = Tr.F("Автоматизация · {0} · {1}", vm.Config.IndexOf(p), ProfileNames.Display(p));
+        _title.Text = Tr.F("Automation · {0} · {1}", vm.Config.IndexOf(p), ProfileNames.Display(p));
         foreach (var (g, _) in Groups) _panels[g] = new StackPanel();
 
-        var add = new WpfUiButton { Content = Tr.T("Добавить"), Icon = SymbolRegular.Add24, Appearance = ControlAppearance.Primary, VerticalAlignment = VerticalAlignment.Top };
+        var add = new WpfUiButton { Content = Tr.T("Add"), Icon = SymbolRegular.Add24, Appearance = ControlAppearance.Primary, VerticalAlignment = VerticalAlignment.Top };
         add.ContextMenu = new ContextMenu
         {
             Items =
             {
-                Item(Tr.T("При входе в профиль"), SymbolRegular.ArrowEnterLeft24, () => AddManual(PipelineKeys.Enter)),
-                Item(Tr.T("При выходе из профиля"), SymbolRegular.ArrowExportLtr24, () => AddManual(PipelineKeys.Exit)),
-                Item(Tr.T("Событие LLT…"), SymbolRegular.Flash24, AddTriggered),
+                Item(Tr.T("On entering the profile"), SymbolRegular.ArrowEnterLeft24, () => AddManual(PipelineKeys.Enter)),
+                Item(Tr.T("On leaving the profile"), SymbolRegular.ArrowExportLtr24, () => AddManual(PipelineKeys.Exit)),
+                Item(Tr.T("LLT event…"), SymbolRegular.Flash24, AddTriggered),
             },
         };
         add.Click += (_, _) => { add.ContextMenu.PlacementTarget = add; add.ContextMenu.IsOpen = true; };
         var top = new Grid { Margin = new Thickness(16, 0, 16, 8) };
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        top.Children.Add(Text(Tr.T("Действия LLT, которые выполняет этот профиль: при входе в него, при выходе и по событиям LLT, пока он действует. ") +
-                              Tr.T("Унаследованные можно выключить или переставить; выключенное здесь не попадёт и в профили, наследующие от этого. ") +
-                              Tr.T("На одно событие выполняются все включённые действия, по порядку списка."), "SubLine"));
+        top.Children.Add(Text(Tr.T("LLT actions this profile runs: on entering it, on leaving it and on LLT events while it is in force. ") +
+                              Tr.T("Inherited ones can be turned off or reordered; what is turned off here does not reach profiles inheriting from this one. ") +
+                              Tr.T("All enabled actions for one event run in list order."), "SubLine"));
         Grid.SetColumn(add, 1);
         top.Children.Add(add);
 
@@ -135,9 +135,9 @@ public sealed class AutomationWindow : BaseWindow
         var footer = new Grid { Margin = new Thickness(16, 0, 16, 12) };
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         for (var i = 0; i < 3; i++) footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var effective = new WpfUiButton { Content = Tr.T("Итоговые действия"), Icon = SymbolRegular.Flowchart24, Margin = new Thickness(8, 0, 0, 0) };
+        var effective = new WpfUiButton { Content = Tr.T("Effective actions"), Icon = SymbolRegular.Flowchart24, Margin = new Thickness(8, 0, 0, 0) };
         effective.Click += (_, _) => Safe(() => { if (Draft() is { } d) EffectiveActionsWindow.Open(this, d.Config, d.Profile); });
-        var cancel = new WpfUiButton { Content = Tr.T("Отмена"), MinWidth = 120, Margin = new Thickness(8, 0, 0, 0) };
+        var cancel = new WpfUiButton { Content = Tr.T("Cancel"), MinWidth = 120, Margin = new Thickness(8, 0, 0, 0) };
         cancel.Click += (_, _) => Close();
         _save.Click += async (_, _) => await SaveAsync();
         Grid.SetColumn(effective, 1);
@@ -180,7 +180,7 @@ public sealed class AutomationWindow : BaseWindow
         catch (Exception e)
         {
             Log.Error("automation load", e);
-            _errors.Text = Tr.F("Не удалось загрузить действия: {0}", e.Message);
+            _errors.Text = Tr.F("Could not load the actions: {0}", e.Message);
         }
     }
 
@@ -257,7 +257,7 @@ public sealed class AutomationWindow : BaseWindow
         foreach (var p in _panels.Values) p.Children.Clear();
         if (_entries.Count == 0)
         {
-            _list.Children.Add(Text(Tr.T("Действий нет. «Добавить» создаёт действие при входе, при выходе или по событию LLT."), "SubLine"));
+            _list.Children.Add(Text(Tr.T("No actions. \"Add\" creates an action on enter, on exit or on an LLT event."), "SubLine"));
             return;
         }
         var number = 0;
@@ -298,7 +298,7 @@ public sealed class AutomationWindow : BaseWindow
             run.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "SystemAccentColorSecondaryBrush");
             e.Overline.Inlines.Add(run);
         }
-        e.Overline.Inlines.Add(new System.Windows.Documents.Run(e.Own ? "" : Tr.F(" · ↳ от «{0}»", ProfileNames.Display(e.Source))));
+        e.Overline.Inlines.Add(new System.Windows.Documents.Run(e.Own ? "" : Tr.F(" · ↳ from \"{0}\"", ProfileNames.Display(e.Source))));
     }
 
     static string? Logic(Entry e)
@@ -308,8 +308,8 @@ public sealed class AutomationWindow : BaseWindow
             var trigger = e.Control is { } c ? c.AutomationPipeline.Trigger : e.Inherited is { } p ? PipelineJson.Read(p.Llt).Trigger : null;
             return trigger switch
             {
-                LenovoLegionToolkit.Lib.Automation.Pipeline.Triggers.AndAutomationPipelineTrigger => Tr.T("все условия (И)"),
-                LenovoLegionToolkit.Lib.Automation.Pipeline.Triggers.OrAutomationPipelineTrigger => Tr.T("любое из условий (ИЛИ)"),
+                LenovoLegionToolkit.Lib.Automation.Pipeline.Triggers.AndAutomationPipelineTrigger => Tr.T("all conditions (AND)"),
+                LenovoLegionToolkit.Lib.Automation.Pipeline.Triggers.OrAutomationPipelineTrigger => Tr.T("any condition (OR)"),
                 _ => null,
             };
         }
@@ -320,7 +320,7 @@ public sealed class AutomationWindow : BaseWindow
     UIElement GroupHeader(Group group, string title, int count)
     {
         var folded = _folded.Contains(group);
-        var grid = new Grid { Margin = new Thickness(0, 8, 0, 10), Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = folded ? Tr.T("Развернуть") : Tr.T("Свернуть") };
+        var grid = new Grid { Margin = new Thickness(0, 8, 0, 10), Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = folded ? Tr.T("Expand") : Tr.T("Collapse") };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -352,10 +352,10 @@ public sealed class AutomationWindow : BaseWindow
     FrameworkElement Row(Entry e)
     {
         e.Overline = Text("", "SubLine", new Thickness(0, 0, 0, 2));
-        e.Up = Small(SymbolRegular.ArrowUp24, Tr.T("Выше"), true, () => Move(e, -1));
-        e.Down = Small(SymbolRegular.ArrowDown24, Tr.T("Ниже"), true, () => Move(e, 1));
+        e.Up = Small(SymbolRegular.ArrowUp24, Tr.T("Up"), true, () => Move(e, -1));
+        e.Down = Small(SymbolRegular.ArrowDown24, Tr.T("Down"), true, () => Move(e, 1));
         e.Accessory = new ContentControl { VerticalAlignment = VerticalAlignment.Center };
-        e.Toggle = new Wpf.Ui.Controls.ToggleSwitch { IsChecked = e.Enabled, Margin = new Thickness(12, 0, 0, 0), ToolTip = Tr.T("Выполнять в этом профиле"), VerticalAlignment = VerticalAlignment.Center };
+        e.Toggle = new Wpf.Ui.Controls.ToggleSwitch { IsChecked = e.Enabled, Margin = new Thickness(12, 0, 0, 0), ToolTip = Tr.T("Run in this profile"), VerticalAlignment = VerticalAlignment.Center };
         e.Toggle.Click += (_, _) => Safe(() =>
         {
             e.Enabled = e.Toggle.IsChecked == true;
@@ -380,8 +380,8 @@ public sealed class AutomationWindow : BaseWindow
         {
             Title = ProfileEditorWindow.PipelineName(e.Inherited!),
             Subtitle = e.BlockedBy is { } by
-                ? Tr.F("Выключено в «{0}»; включить можно в его автоматизации", ProfileNames.Display(by))
-                : Tr.F("Наследуется от «{0}»; изменить можно в его автоматизации", ProfileNames.Display(e.Source)),
+                ? Tr.F("Turned off in \"{0}\"; it can be turned on in its automation", ProfileNames.Display(by))
+                : Tr.F("Inherited from \"{0}\"; it can be changed in its automation", ProfileNames.Display(e.Source)),
         };
         if (e.BlockedBy is not null)
         {
@@ -405,7 +405,7 @@ public sealed class AutomationWindow : BaseWindow
     // slot of their size when they lie over the row).
     UIElement Wrap(Entry e, SymbolRegular icon, UIElement header, FrameworkElement right)
     {
-        var handle = new Border { Width = 24, Margin = new Thickness(-6, -8, 6, -8), Background = Brushes.Transparent, Cursor = Cursors.SizeAll, ToolTip = Tr.T("Перетащите, чтобы изменить порядок") };
+        var handle = new Border { Width = 24, Margin = new Thickness(-6, -8, 6, -8), Background = Brushes.Transparent, Cursor = Cursors.SizeAll, ToolTip = Tr.T("Drag to change the order") };
         handle.Child = Dots(6);
         if (e.BlockedBy is not null) { handle.Child.Visibility = Visibility.Hidden; handle.Cursor = null; handle.ToolTip = null; handle.IsHitTestVisible = false; }
         handle.PreviewMouseLeftButtonDown += (_, ev) => Safe(() => BeginEntryDrag(e, handle, ev));
@@ -562,7 +562,7 @@ public sealed class AutomationWindow : BaseWindow
     void AddManual(string key) => Safe(() =>
     {
         if (_steps is null) return;
-        var pipeline = new AutomationPipeline(key == PipelineKeys.Enter ? "При входе" : "При выходе");
+        var pipeline = new AutomationPipeline(key == PipelineKeys.Enter ? "On enter" : "On leave");
         Append(new Entry { Id = pipeline.Id, Source = _profile, Own = true, Key = key, Control = MakeControl(pipeline) });
     });
 
@@ -606,7 +606,7 @@ public sealed class AutomationWindow : BaseWindow
         try
         {
             if (Draft() is not { } d) return;
-            var error = await _vm.TrySaveAsync(d.Config, Tr.F("Автоматизация «{0}» сохранена", ProfileNames.Display(_profile)));
+            var error = await _vm.TrySaveAsync(d.Config, Tr.F("Automation \"{0}\" saved", ProfileNames.Display(_profile)));
             if (error is not null) { _errors.Text = error; return; }
             _closingConfirmed = true;
             Close();
@@ -614,7 +614,7 @@ public sealed class AutomationWindow : BaseWindow
         catch (Exception e)
         {
             Log.Error("automation save", e);
-            _errors.Text = Tr.F("Не сохранено: {0}", e.Message);
+            _errors.Text = Tr.F("Not saved: {0}", e.Message);
         }
     }
 
@@ -624,7 +624,7 @@ public sealed class AutomationWindow : BaseWindow
         e.Cancel = true;
         try
         {
-            if (!await MessageBoxHelper.ShowAsync(this, Tr.T("Закрыть без сохранения?"), Tr.T("Изменения автоматизации будут потеряны."), Tr.T("Закрыть"), Tr.T("Остаться"))) return;
+            if (!await MessageBoxHelper.ShowAsync(this, Tr.T("Close without saving?"), Tr.T("The automation changes will be lost."), Tr.T("Close"), Tr.T("Stay"))) return;
             _closingConfirmed = true;
             Close();
         }
